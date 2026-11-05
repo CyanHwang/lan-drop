@@ -94,6 +94,13 @@ func main() {
 
 	svc.attach(app)
 
+	// The quit button in the UI and the tray menu share one path: flag the
+	// exit first, so the WindowClosing hook lets the window close for real.
+	svc.setQuitHook(func() {
+		atomic.StoreUint32(&isExiting, 1)
+		app.Quit()
+	})
+
 	// Create the main window.
 	mainWin = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "LanDrop",

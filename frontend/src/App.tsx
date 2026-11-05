@@ -168,6 +168,13 @@ const ICO_GITHUB = (
   </svg>
 )
 
+const ICO_POWER = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v9" />
+    <path d="M6.4 6.4a8 8 0 1 0 11.2 0" />
+  </svg>
+)
+
 const ICO_LANG = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="9" />
@@ -422,6 +429,15 @@ export default function App() {
         >
           {ICO_LANG}
           {lang === 'en' ? '中文' : 'EN'}
+        </button>
+        <button
+          className="quit-btn"
+          type="button"
+          onClick={() => AppService.Quit().catch(() => undefined)}
+          aria-label={t('app.quit')}
+          title={t('app.quit')}
+        >
+          {ICO_POWER}
         </button>
       </header>
 

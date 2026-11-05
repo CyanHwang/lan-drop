@@ -55,6 +55,7 @@ const (
 const (
 	AppDescription   Msg = "app.description"
 	AppRepo          Msg = "app.repo"
+	AppQuit          Msg = "app.quit"
 	TrayTooltip      Msg = "tray.tooltip"
 	TrayOpen         Msg = "tray.open"
 	TrayQuit         Msg = "tray.quit"
@@ -114,6 +115,7 @@ var catalogue = map[Lang]map[Msg]string{
 
 		AppDescription:   "LAN file transfer",
 		AppRepo:          "Open the GitHub repository",
+		AppQuit:          "Quit LanDrop",
 		TrayTooltip:      "LanDrop - LAN file transfer",
 		TrayOpen:         "Open LanDrop",
 		TrayQuit:         "Quit LanDrop",
@@ -168,6 +170,7 @@ var catalogue = map[Lang]map[Msg]string{
 
 		AppDescription:   "局域网快传",
 		AppRepo:          "打开 GitHub 仓库",
+		AppQuit:          "退出 LanDrop",
 		TrayTooltip:      "LanDrop - 局域网快传",
 		TrayOpen:         "打开 LanDrop",
 		TrayQuit:         "退出 LanDrop",

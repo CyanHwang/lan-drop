@@ -36,6 +36,8 @@ type AppService struct {
 	lang i18n.Lang
 	// onLangChange lets the shell rebuild the tray menu after a switch.
 	onLangChange func(i18n.Lang)
+	// quit exits the process; wired by main so it can set the exit flag first.
+	quit func()
 }
 
 func NewAppService() *AppService {
@@ -52,6 +54,24 @@ func (a *AppService) attach(app *application.App) {
 		app.Event.Emit(name, data)
 	})
 	a.srv.SetLanguage(a.lang)
+}
+
+// setQuitHook registers the function that terminates the process.
+func (a *AppService) setQuitHook(fn func()) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.quit = fn
+}
+
+// Quit closes the application completely: window, tray icon and LAN server.
+// Unlike closing the window, this ends the process.
+func (a *AppService) Quit() {
+	a.mu.Lock()
+	fn := a.quit
+	a.mu.Unlock()
+	if fn != nil {
+		fn()
+	}
 }
 
 // setLangChangeHook registers a callback fired whenever the language changes.

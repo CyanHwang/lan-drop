@@ -276,6 +276,42 @@ button:disabled {
   user-select: none;
 }
 
+/* Quit. Turns red on hover: it ends the process, unlike the window's own
+   close button which only hides it. */
+.quit-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  --wails-draggable: no-drag;
+  transition:
+    color 0.16s,
+    background-color 0.16s,
+    transform 0.12s;
+}
+
+.quit-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.quit-btn:hover {
+  color: var(--err);
+  background: var(--err-soft);
+}
+
+.quit-btn:active {
+  transform: scale(0.94);
+}
+
+.quit-btn:focus-visible {
+  outline: 2px solid var(--err-soft);
+  outline-offset: 2px;
+}
+
 /* Repository link. Borderless until hovered, so it does not compete with the
    two pills already in the top bar. */
 .repo-btn {
