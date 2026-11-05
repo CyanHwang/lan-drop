@@ -16,6 +16,12 @@ import (
 	"github.com/CyanHwang/lan-drop/internal/transfer"
 )
 
+// ViewOptions are the listing filters the user controls from the desktop.
+type ViewOptions struct {
+	ShowHidden   bool `json:"showHidden"`
+	ShowDotfiles bool `json:"showDotfiles"`
+}
+
 // AppService is the bridge between the React desktop UI and the LAN server.
 // It owns the transfer.Server lifetime, the persisted share list, and re-emits
 // transfer progress as Wails events.
@@ -64,6 +70,31 @@ func (a *AppService) L() i18n.Lang {
 // err builds a localised error for the UI.
 func (a *AppService) err(m i18n.Msg, args ...any) error {
 	return errors.New(i18n.T(a.L(), m, args...))
+}
+
+// ViewOptions returns the persisted listing filters.
+func (a *AppService) ViewOptions() ViewOptions {
+	cfg := config.Load()
+	return ViewOptions{ShowHidden: cfg.ShowHidden, ShowDotfiles: cfg.ShowDotfiles}
+}
+
+// SetViewOptions persists the filters and, when the server is already running,
+// applies them without a restart — the next listing request picks them up.
+func (a *AppService) SetViewOptions(o ViewOptions) (ViewOptions, error) {
+	cfg := config.Load()
+	cfg.ShowHidden = o.ShowHidden
+	cfg.ShowDotfiles = o.ShowDotfiles
+	if err := config.Save(cfg); err != nil {
+		return ViewOptions{}, a.err(i18n.ErrConfigWrite, err)
+	}
+
+	a.mu.Lock()
+	srv := a.srv
+	a.mu.Unlock()
+	if srv != nil {
+		srv.SetViewOptions(o.ShowHidden, o.ShowDotfiles)
+	}
+	return o, nil
 }
 
 // Language returns the active UI language tag ("en" or "zh-CN").
@@ -190,8 +221,10 @@ func (a *AppService) Start(port int) (transfer.Info, error) {
 	}
 	cfg := config.Load()
 	return srv.StartWithOptions(cfg.Shares, transfer.StartOptions{
-		Port: port,
-		Lang: i18n.Resolve(cfg.Language),
+		Port:         port,
+		Lang:         i18n.Resolve(cfg.Language),
+		ShowHidden:   cfg.ShowHidden,
+		ShowDotfiles: cfg.ShowDotfiles,
 	})
 }
 

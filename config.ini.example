@@ -10,12 +10,23 @@
 ;     later will not silently switch the UI. The desktop window can change it
 ;     from the top bar, which writes back to this file.
 ;
+;   show_hidden = true | false
+;     Include entries carrying the OS hidden attribute. Windows only — Unix
+;     filesystems have no such attribute.
+;
+;   show_dotfiles = true | false
+;     Include entries whose name starts with a dot.
+;
+;   Both filters apply to folders as well as files, and both default to false.
+;
 ; [share_N]
 ;   name = label shown to other devices
 ;   path = absolute path on this machine
 
 [general]
 language = en
+show_hidden = false
+show_dotfiles = false
 
 [share_1]
 name = Downloads

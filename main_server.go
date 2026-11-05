@@ -70,11 +70,13 @@ func main() {
 
 	srv := transfer.New(nil)
 	info, err := srv.StartWithOptions(list, transfer.StartOptions{
-		Port:       port,
-		Host:       host,
-		StrictPort: !*autoPort,
-		ReadOnly:   *readOnly,
-		Lang:       lang,
+		Port:         port,
+		Host:         host,
+		StrictPort:   !*autoPort,
+		ReadOnly:     *readOnly,
+		Lang:         lang,
+		ShowHidden:   cfg.ShowHidden,
+		ShowDotfiles: cfg.ShowDotfiles,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

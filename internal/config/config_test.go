@@ -180,3 +180,37 @@ func TestEnsureLanguageDetectsAndPersists(t *testing.T) {
 		t.Fatalf("EnsureLanguage() = %q after SetLanguage(en), want en", again)
 	}
 }
+
+func TestViewOptionsRoundTrip(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.ini")
+
+	if err := saveTo(p, Config{Language: "en", ShowHidden: true, ShowDotfiles: false}); err != nil {
+		t.Fatal(err)
+	}
+	cfg := loadFile(p)
+	if !cfg.ShowHidden || cfg.ShowDotfiles {
+		t.Fatalf("got showHidden=%v showDotfiles=%v, want true/false", cfg.ShowHidden, cfg.ShowDotfiles)
+	}
+
+	// Both on, both off: the pair must survive independently.
+	if err := saveTo(p, Config{Language: "en", ShowHidden: true, ShowDotfiles: true}); err != nil {
+		t.Fatal(err)
+	}
+	if cfg := loadFile(p); !cfg.ShowHidden || !cfg.ShowDotfiles {
+		t.Fatalf("got %+v, want both true", cfg)
+	}
+}
+
+// People edit this file by hand, so accept the usual boolean spellings.
+func TestParseBoolSpellings(t *testing.T) {
+	for _, v := range []string{"true", "TRUE", "1", "yes", "on", " on "} {
+		if !parseBool(v) {
+			t.Errorf("parseBool(%q) = false, want true", v)
+		}
+	}
+	for _, v := range []string{"false", "0", "no", "off", "", "nope"} {
+		if parseBool(v) {
+			t.Errorf("parseBool(%q) = true, want false", v)
+		}
+	}
+}

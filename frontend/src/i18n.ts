@@ -27,6 +27,10 @@ const en: Dict = {
   'service.openBrowser': 'Open in browser',
   'service.needShare': 'Add at least one folder to share first',
 
+  'options.showHidden': 'Show hidden files',
+  'options.showDotfiles': 'Show dot-prefixed files',
+  'options.appliesTo': 'Applies to both files and folders',
+
   'steps.1': 'Add the folders you want to share',
   'steps.2': 'Start the service, then scan or type the address',
   'steps.3': 'Open it in any browser on the same network',
@@ -72,6 +76,10 @@ const zh: Dict = {
   'service.stop': '停止服务',
   'service.openBrowser': '浏览器打开',
   'service.needShare': '先添加至少一个要共享的文件夹',
+
+  'options.showHidden': '显示隐藏文件',
+  'options.showDotfiles': '显示以 . 开头的文件',
+  'options.appliesTo': '对文件和文件夹同时生效',
 
   'steps.1': '添加要共享的文件夹',
   'steps.2': '启动服务，扫码或输入地址',

@@ -17,8 +17,12 @@ import (
 // Config represents the persisted application settings.
 type Config struct {
 	// Language is "en" or "zh-CN". Empty means it has never been resolved.
-	Language string           `json:"language"`
-	Shares   []transfer.Share `json:"shares"`
+	Language string `json:"language"`
+	// ShowHidden lists entries carrying the OS hidden attribute (Windows only).
+	ShowHidden bool `json:"showHidden"`
+	// ShowDotfiles lists entries whose name starts with a dot.
+	ShowDotfiles bool             `json:"showDotfiles"`
+	Shares       []transfer.Share `json:"shares"`
 }
 
 // FilePath returns the absolute path to config.ini alongside the executable.
@@ -111,6 +115,8 @@ func loadFile(p string) Config {
 				if v := kv["language"]; v != "" {
 					cfg.Language = v
 				}
+				cfg.ShowHidden = parseBool(kv["show_hidden"])
+				cfg.ShowDotfiles = parseBool(kv["show_dotfiles"])
 			} else if raw := kv["path"]; raw != "" {
 				path := filepath.Clean(raw)
 				name := kv["name"]
@@ -180,7 +186,9 @@ func saveTo(p string, c Config) error {
 	b.WriteString("; LanDrop configuration file\n")
 	b.WriteString("; Edit it with any text editor to add or change shared folders.\n\n")
 	b.WriteString("[general]\r\n")
-	fmt.Fprintf(&b, "language = %s\r\n\r\n", lang)
+	fmt.Fprintf(&b, "language = %s\r\n", lang)
+	fmt.Fprintf(&b, "show_hidden = %t\r\n", c.ShowHidden)
+	fmt.Fprintf(&b, "show_dotfiles = %t\r\n\r\n", c.ShowDotfiles)
 
 	for i, sh := range c.Shares {
 		fmt.Fprintf(&b, "[share_%d]\r\n", i+1)
@@ -189,6 +197,15 @@ func saveTo(p string, c Config) error {
 	}
 
 	return os.WriteFile(p, []byte(b.String()), 0o644)
+}
+
+// parseBool accepts the spellings people actually type in an ini file.
+func parseBool(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 // SetLanguage rewrites only the language field, keeping the share list intact.

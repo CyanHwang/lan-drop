@@ -19,6 +19,11 @@ type Info = {
   shares: Share[]
 }
 
+type ViewOptions = {
+  showHidden: boolean
+  showDotfiles: boolean
+}
+
 type Progress = {
   id: string
   name: string
@@ -35,6 +40,12 @@ type Progress = {
 }
 
 const EMPTY_INFO: Info = { running: false, port: 0, urls: [], since: 0, readOnly: false, shares: [] }
+const EMPTY_OPTIONS: ViewOptions = { showHidden: false, showDotfiles: false }
+
+function normalizeOptions(raw: unknown): ViewOptions {
+  const v = (raw ?? {}) as Partial<ViewOptions>
+  return { showHidden: Boolean(v.showHidden), showDotfiles: Boolean(v.showDotfiles) }
+}
 
 function normalizeShare(raw: unknown): Share | null {
   const v = (raw ?? {}) as Partial<Share>
@@ -167,6 +178,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [items, setItems] = useState<Progress[]>([])
   const [copied, setCopied] = useState('')
+  const [opts, setOpts] = useState<ViewOptions>(EMPTY_OPTIONS)
   const [lang, setLang] = useState<Lang>('en')
 
   const t = useMemo(() => makeT(lang), [lang])
@@ -188,6 +200,10 @@ export default function App() {
 
     AppService.Shares()
       .then((raw: unknown) => setShares(normalizeShares(raw)))
+      .catch(() => undefined)
+
+    AppService.ViewOptions()
+      .then((raw: unknown) => setOpts(normalizeOptions(raw)))
       .catch(() => undefined)
 
     AppService.Status()
@@ -309,6 +325,23 @@ export default function App() {
     copyTimer.current = setTimeout(() => setCopied(''), 1600)
   }, [])
 
+  const toggleOption = useCallback(
+    async (key: keyof ViewOptions) => {
+      const previous = opts
+      const next = { ...opts, [key]: !opts[key] }
+      // Optimistic: a checkbox that lags behind the click feels broken.
+      setOpts(next)
+      try {
+        setOpts(normalizeOptions(await AppService.SetViewOptions(next)))
+        setError('')
+      } catch (e) {
+        setOpts(previous)
+        setError(String((e as Error)?.message ?? e))
+      }
+    },
+    [opts],
+  )
+
   const changeLang = useCallback(async (next: Lang) => {
     try {
       const applied = await AppService.SetLanguage(next)
@@ -400,6 +433,17 @@ export default function App() {
               {t('shares.add')}
             </button>
           )}
+
+          <div className="view-opts" title={t('options.appliesTo')}>
+            <label className="check">
+              <input type="checkbox" checked={opts.showHidden} onChange={() => toggleOption('showHidden')} />
+              <span>{t('options.showHidden')}</span>
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={opts.showDotfiles} onChange={() => toggleOption('showDotfiles')} />
+              <span>{t('options.showDotfiles')}</span>
+            </label>
+          </div>
 
           <div className="btn-row">
             {info.running ? (

@@ -102,10 +102,20 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	showHidden, showDotfiles := s.ViewOptions()
+
 	entries := make([]Entry, 0, len(dirents))
 	for _, de := range dirents {
 		info, err := de.Info()
 		if err != nil {
+			continue
+		}
+		// Two independent filters: the dot prefix is a naming convention that
+		// works everywhere, the hidden attribute only exists on Windows.
+		if !showDotfiles && strings.HasPrefix(de.Name(), ".") {
+			continue
+		}
+		if !showHidden && isHiddenInfo(info) {
 			continue
 		}
 		// Hide dangling or escaping symlinks rather than exposing them.

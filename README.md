@@ -113,6 +113,8 @@ Settings live in `config.ini` **next to the executable**, so the whole thing is 
 
 [general]
 language = en            ; en | zh-CN
+show_hidden = false      ; include entries with the OS hidden attribute
+show_dotfiles = false    ; include entries whose name starts with a dot
 
 [share_1]
 name = Downloads
@@ -122,6 +124,11 @@ path = D:\Downloads
 name = Work
 path = D:\Work\Docs
 ```
+
+Both listing filters apply to folders as well as files, and both default to
+`false`. `show_hidden` only has an effect on Windows, where files carry a hidden
+attribute; on Unix a leading dot is the only convention, so `show_dotfiles`
+covers it.
 
 See [`config.ini.example`](config.ini.example). The real `config.ini` is git-ignored — it holds machine-specific paths.
 

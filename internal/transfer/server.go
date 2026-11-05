@@ -100,6 +100,12 @@ type StartOptions struct {
 	ReadOnly bool
 	// Lang selects the language for error messages. Zero value means English.
 	Lang i18n.Lang
+	// ShowHidden includes entries carrying the OS hidden attribute (Windows).
+	// On Unix there is no such attribute, so dotfiles are the only convention
+	// and this flag has no effect.
+	ShowHidden bool
+	// ShowDotfiles includes entries whose name starts with a dot.
+	ShowDotfiles bool
 }
 
 // Server owns the LAN-facing HTTP listener. It is deliberately separate from
@@ -114,6 +120,10 @@ type Server struct {
 	since    time.Time
 	readOnly atomic.Bool
 	lang     atomic.Value // i18n.Lang
+	// Listing filters. Atomic so the desktop can flip them while the server
+	// is running without a restart; the next request picks them up.
+	showHidden   atomic.Bool
+	showDotfiles atomic.Bool
 
 	emit func(name string, data any)
 }
@@ -131,6 +141,17 @@ func (s *Server) L() i18n.Lang {
 		return v
 	}
 	return i18n.EN
+}
+
+// SetViewOptions updates the listing filters. Safe to call while serving.
+func (s *Server) SetViewOptions(showHidden, showDotfiles bool) {
+	s.showHidden.Store(showHidden)
+	s.showDotfiles.Store(showDotfiles)
+}
+
+// ViewOptions reports the current listing filters.
+func (s *Server) ViewOptions() (showHidden, showDotfiles bool) {
+	return s.showHidden.Load(), s.showDotfiles.Load()
 }
 
 // SetLanguage switches the language of subsequent API error messages.
@@ -226,6 +247,8 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	s.httpSrv = srv
 	s.since = time.Now()
 	s.readOnly.Store(opt.ReadOnly)
+	s.showHidden.Store(opt.ShowHidden)
+	s.showDotfiles.Store(opt.ShowDotfiles)
 
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -251,6 +274,8 @@ func (s *Server) Stop() error {
 	s.shares = nil
 	s.since = time.Time{}
 	s.readOnly.Store(false)
+	s.showHidden.Store(false)
+	s.showDotfiles.Store(false)
 	return err
 }
 
