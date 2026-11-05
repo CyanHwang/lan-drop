@@ -572,63 +572,63 @@ export default function App() {
             )}
           </div>
         </section>
-      </div>
 
-      <section className="activity pane-activity">
-        <div className="activity-head">
-          <h2>{t('activity.title')}</h2>
-          {items.length > 0 && (
-            <span className="count">{active > 0 ? t('activity.active', { count: active }) : items.length}</span>
-          )}
-          <span className="spacer" />
-          {items.length > 0 && (
-            <button className="link-btn" onClick={() => setItems([])}>
-              {t('activity.clear')}
-            </button>
-          )}
-        </div>
-        <div className="activity-list">
-          {items.length === 0 ? (
-            <div className="activity-empty">
-              {ICO_IDLE}
-              {t('activity.empty')}
-            </div>
-          ) : (
-            items.map((x) => {
-              const pct = x.total > 0 ? Math.min(100, (x.loaded / x.total) * 100) : 0
-              const cls = x.done ? (x.error ? 'act failed' : 'act done') : 'act running'
-              const where = [x.share, x.dir].filter(Boolean).join(' / ')
-              return (
-                <div className={x.direction === 'down' ? `${cls} down` : cls} key={x.id}>
-                  <span className="dir-ico">{x.direction === 'down' ? ICO_DOWN : ICO_UP}</span>
-                  <div className="act-body">
-                    <div className="act-line1">
-                      <span className="act-name" title={x.name}>
-                        {x.name}
-                      </span>
-                      {where && <span className="act-dir">{where}</span>}
-                      <span className="act-time">{fmtClock(x.at)}</span>
+        <section className="activity pane-activity">
+          <div className="activity-head">
+            <h2>{t('activity.title')}</h2>
+            {items.length > 0 && (
+              <span className="count">{active > 0 ? t('activity.active', { count: active }) : items.length}</span>
+            )}
+            <span className="spacer" />
+            {items.length > 0 && (
+              <button className="link-btn" onClick={() => setItems([])}>
+                {t('activity.clear')}
+              </button>
+            )}
+          </div>
+          <div className="activity-list">
+            {items.length === 0 ? (
+              <div className="activity-empty">
+                {ICO_IDLE}
+                {t('activity.empty')}
+              </div>
+            ) : (
+              items.map((x) => {
+                const pct = x.total > 0 ? Math.min(100, (x.loaded / x.total) * 100) : 0
+                const cls = x.done ? (x.error ? 'act failed' : 'act done') : 'act running'
+                const where = [x.share, x.dir].filter(Boolean).join(' / ')
+                return (
+                  <div className={x.direction === 'down' ? `${cls} down` : cls} key={x.id}>
+                    <span className="dir-ico">{x.direction === 'down' ? ICO_DOWN : ICO_UP}</span>
+                    <div className="act-body">
+                      <div className="act-line1">
+                        <span className="act-name" title={x.name}>
+                          {x.name}
+                        </span>
+                        {where && <span className="act-dir">{where}</span>}
+                        <span className="act-time">{fmtClock(x.at)}</span>
+                      </div>
+                      <div className="act-bar">
+                        <i style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <div className="act-bar">
-                      <i style={{ width: `${pct}%` }} />
+                    <div className="act-stat">
+                      {x.error ? (
+                        <strong>{t('activity.failed')}</strong>
+                      ) : x.done ? (
+                        <strong>{fmtSize(x.total || x.loaded)}</strong>
+                      ) : (
+                        <strong>{Math.round(pct)}%</strong>
+                      )}
+                      {x.error ? x.error : x.done ? fmtElapsed(x.elapsedMs, t) : fmtSpeed(x.speed)}
                     </div>
                   </div>
-                  <div className="act-stat">
-                    {x.error ? (
-                      <strong>{t('activity.failed')}</strong>
-                    ) : x.done ? (
-                      <strong>{fmtSize(x.total || x.loaded)}</strong>
-                    ) : (
-                      <strong>{Math.round(pct)}%</strong>
-                    )}
-                    {x.error ? x.error : x.done ? fmtElapsed(x.elapsedMs, t) : fmtSpeed(x.speed)}
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      </section>
+                )
+              })
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
