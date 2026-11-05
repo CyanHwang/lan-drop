@@ -19,6 +19,12 @@
 ;
 ;   Both filters apply to folders as well as files, and both default to false.
 ;
+;   filter = *.tmp, node_modules
+;     Entries to hide from the listing. Separate with commas or semicolons.
+;     Each entry is a name or a glob (* and ?); start it with re: to use a
+;     regular expression. Anything that does not compile is ignored, never
+;     reported, so a typo cannot break the listing.
+;
 ; [share_N]
 ;   name = label shown to other devices
 ;   path = absolute path on this machine
@@ -27,6 +33,7 @@
 language = en
 show_hidden = false
 show_dotfiles = false
+filter =
 
 [share_1]
 name = Downloads

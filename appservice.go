@@ -18,8 +18,9 @@ import (
 
 // ViewOptions are the listing filters the user controls from the desktop.
 type ViewOptions struct {
-	ShowHidden   bool `json:"showHidden"`
-	ShowDotfiles bool `json:"showDotfiles"`
+	ShowHidden   bool   `json:"showHidden"`
+	ShowDotfiles bool   `json:"showDotfiles"`
+	Filter       string `json:"filter"`
 }
 
 // AppService is the bridge between the React desktop UI and the LAN server.
@@ -75,7 +76,11 @@ func (a *AppService) err(m i18n.Msg, args ...any) error {
 // ViewOptions returns the persisted listing filters.
 func (a *AppService) ViewOptions() ViewOptions {
 	cfg := config.Load()
-	return ViewOptions{ShowHidden: cfg.ShowHidden, ShowDotfiles: cfg.ShowDotfiles}
+	return ViewOptions{
+		ShowHidden:   cfg.ShowHidden,
+		ShowDotfiles: cfg.ShowDotfiles,
+		Filter:       cfg.Filter,
+	}
 }
 
 // SetViewOptions persists the filters and, when the server is already running,
@@ -84,6 +89,7 @@ func (a *AppService) SetViewOptions(o ViewOptions) (ViewOptions, error) {
 	cfg := config.Load()
 	cfg.ShowHidden = o.ShowHidden
 	cfg.ShowDotfiles = o.ShowDotfiles
+	cfg.Filter = o.Filter
 	if err := config.Save(cfg); err != nil {
 		return ViewOptions{}, a.err(i18n.ErrConfigWrite, err)
 	}
@@ -93,6 +99,7 @@ func (a *AppService) SetViewOptions(o ViewOptions) (ViewOptions, error) {
 	a.mu.Unlock()
 	if srv != nil {
 		srv.SetViewOptions(o.ShowHidden, o.ShowDotfiles)
+		srv.SetFilter(o.Filter)
 	}
 	return o, nil
 }
@@ -225,6 +232,7 @@ func (a *AppService) Start(port int) (transfer.Info, error) {
 		Lang:         i18n.Resolve(cfg.Language),
 		ShowHidden:   cfg.ShowHidden,
 		ShowDotfiles: cfg.ShowDotfiles,
+		Filter:       cfg.Filter,
 	})
 }
 

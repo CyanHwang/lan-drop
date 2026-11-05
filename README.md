@@ -115,6 +115,7 @@ Settings live in `config.ini` **next to the executable**, so the whole thing is 
 language = en            ; en | zh-CN
 show_hidden = false      ; include entries with the OS hidden attribute
 show_dotfiles = false    ; include entries whose name starts with a dot
+filter = *.tmp, node_modules   ; hide these from the listing
 
 [share_1]
 name = Downloads
@@ -129,6 +130,16 @@ Both listing filters apply to folders as well as files, and both default to
 `false`. `show_hidden` only has an effect on Windows, where files carry a hidden
 attribute; on Unix a leading dot is the only convention, so `show_dotfiles`
 covers it.
+
+`filter` hides entries by name. Separate rules with commas or semicolons; each
+rule is a literal name or a glob (`*`, `?`). Prefix a rule with `re:` to use a
+regular expression, and put a single expression with no separators in it to
+match against the whole input. Anything that does not compile is skipped, so a
+typo never breaks the listing:
+
+```ini
+filter = *.tmp; node_modules; re:^\.(git|svn)$
+```
 
 See [`config.ini.example`](config.ini.example). The real `config.ini` is git-ignored — it holds machine-specific paths.
 

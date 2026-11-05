@@ -77,6 +77,7 @@ func main() {
 		Lang:         lang,
 		ShowHidden:   cfg.ShowHidden,
 		ShowDotfiles: cfg.ShowDotfiles,
+		Filter:       cfg.Filter,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

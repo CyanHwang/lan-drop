@@ -117,6 +117,7 @@ docker run --rm -p 57577:57577 -v /host/photos:/data/photos landrop -share /data
 language = en            ; en | zh-CN
 show_hidden = false      ; 显示带系统隐藏属性的项
 show_dotfiles = false    ; 显示以 . 开头的项
+filter = *.tmp, node_modules   ; 从列表中隐藏这些
 
 [share_1]
 name = 下载
@@ -130,6 +131,14 @@ path = D:\Work\Docs
 两个列表过滤开关对文件和文件夹同时生效，默认都是 `false`。`show_hidden` 只在
 Windows 上有意义——那里的文件带隐藏属性；Unix 没有这个概念，点开头是唯一的约定，
 由 `show_dotfiles` 控制。
+
+`filter` 按名称隐藏条目。规则之间用逗号或分号分隔，每条是名称或通配符
+（`*`、`?`）；`re:` 开头的规则按正则解释，整条不含分隔符时也可以直接写一条正则。
+任何无法编译的规则都会被跳过，写错不会让列表挂掉：
+
+```ini
+filter = *.tmp; node_modules; re:^\.(git|svn)$
+```
 
 模板见 [`config.ini.example`](config.ini.example)。真正的 `config.ini` 在 `.gitignore` 里——它存的是本机路径，不该进版本库。
 

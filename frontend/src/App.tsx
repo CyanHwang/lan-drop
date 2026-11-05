@@ -22,6 +22,7 @@ type Info = {
 type ViewOptions = {
   showHidden: boolean
   showDotfiles: boolean
+  filter: string
 }
 
 type Progress = {
@@ -40,11 +41,15 @@ type Progress = {
 }
 
 const EMPTY_INFO: Info = { running: false, port: 0, urls: [], since: 0, readOnly: false, shares: [] }
-const EMPTY_OPTIONS: ViewOptions = { showHidden: false, showDotfiles: false }
+const EMPTY_OPTIONS: ViewOptions = { showHidden: false, showDotfiles: false, filter: '' }
 
 function normalizeOptions(raw: unknown): ViewOptions {
   const v = (raw ?? {}) as Partial<ViewOptions>
-  return { showHidden: Boolean(v.showHidden), showDotfiles: Boolean(v.showDotfiles) }
+  return {
+    showHidden: Boolean(v.showHidden),
+    showDotfiles: Boolean(v.showDotfiles),
+    filter: typeof v.filter === 'string' ? v.filter : '',
+  }
 }
 
 function normalizeShare(raw: unknown): Share | null {
@@ -179,6 +184,8 @@ export default function App() {
   const [items, setItems] = useState<Progress[]>([])
   const [copied, setCopied] = useState('')
   const [opts, setOpts] = useState<ViewOptions>(EMPTY_OPTIONS)
+  // Kept separate from opts so typing does not hit the backend on every key.
+  const [filterDraft, setFilterDraft] = useState('')
   const [lang, setLang] = useState<Lang>('en')
 
   const t = useMemo(() => makeT(lang), [lang])
@@ -203,7 +210,11 @@ export default function App() {
       .catch(() => undefined)
 
     AppService.ViewOptions()
-      .then((raw: unknown) => setOpts(normalizeOptions(raw)))
+      .then((raw: unknown) => {
+        const next = normalizeOptions(raw)
+        setOpts(next)
+        setFilterDraft(next.filter)
+      })
       .catch(() => undefined)
 
     AppService.Status()
@@ -342,6 +353,23 @@ export default function App() {
     [opts],
   )
 
+  // Saved on blur rather than on every keystroke: the value is a free-text
+  // rule list and rewriting config.ini per character would be wasteful.
+  const commitFilter = useCallback(async () => {
+    if (filterDraft === opts.filter) return
+    const previous = opts
+    const next = { ...opts, filter: filterDraft }
+    setOpts(next)
+    try {
+      setOpts(normalizeOptions(await AppService.SetViewOptions(next)))
+      setError('')
+    } catch (e) {
+      setOpts(previous)
+      setFilterDraft(previous.filter)
+      setError(String((e as Error)?.message ?? e))
+    }
+  }, [filterDraft, opts])
+
   const changeLang = useCallback(async (next: Lang) => {
     try {
       const applied = await AppService.SetLanguage(next)
@@ -444,6 +472,27 @@ export default function App() {
               <span>{t('options.showDotfiles')}</span>
             </label>
           </div>
+
+          <label className="filter-field" title={t('options.filterHint')}>
+            <span>{t('options.filter')}</span>
+            <input
+              className="filter-input"
+              type="text"
+              value={filterDraft}
+              placeholder="*.tmp, node_modules, re:^\\.git$"
+              spellCheck={false}
+              autoComplete="off"
+              onChange={(e) => setFilterDraft(e.target.value)}
+              onBlur={commitFilter}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') {
+                  setFilterDraft(opts.filter)
+                  e.currentTarget.blur()
+                }
+              }}
+            />
+          </label>
 
           <div className="btn-row">
             {info.running ? (

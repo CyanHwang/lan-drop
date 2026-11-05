@@ -30,6 +30,9 @@ const en: Dict = {
   'options.showHidden': 'Show hidden files',
   'options.showDotfiles': 'Show dot-prefixed files',
   'options.appliesTo': 'Applies to both files and folders',
+  'options.filter': 'Filter out',
+  'options.filterHint':
+    'Comma or semicolon separated. Each entry is a name or a glob like *.tmp. Start an entry with re: to use a regular expression.',
 
   'steps.1': 'Add the folders you want to share',
   'steps.2': 'Start the service, then scan or type the address',
@@ -80,6 +83,9 @@ const zh: Dict = {
   'options.showHidden': '显示隐藏文件',
   'options.showDotfiles': '显示以 . 开头的文件',
   'options.appliesTo': '对文件和文件夹同时生效',
+  'options.filter': '过滤掉',
+  'options.filterHint':
+    '用逗号或分号分隔。每项是名称或 *.tmp 这样的通配符；re: 开头表示正则表达式。',
 
   'steps.1': '添加要共享的文件夹',
   'steps.2': '启动服务，扫码或输入地址',

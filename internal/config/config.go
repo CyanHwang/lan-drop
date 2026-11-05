@@ -21,8 +21,10 @@ type Config struct {
 	// ShowHidden lists entries carrying the OS hidden attribute (Windows only).
 	ShowHidden bool `json:"showHidden"`
 	// ShowDotfiles lists entries whose name starts with a dot.
-	ShowDotfiles bool             `json:"showDotfiles"`
-	Shares       []transfer.Share `json:"shares"`
+	ShowDotfiles bool `json:"showDotfiles"`
+	// Filter is the user's exclusion list; see transfer.ParseFilter.
+	Filter string           `json:"filter"`
+	Shares []transfer.Share `json:"shares"`
 }
 
 // FilePath returns the absolute path to config.ini alongside the executable.
@@ -117,6 +119,7 @@ func loadFile(p string) Config {
 				}
 				cfg.ShowHidden = parseBool(kv["show_hidden"])
 				cfg.ShowDotfiles = parseBool(kv["show_dotfiles"])
+				cfg.Filter = kv["filter"]
 			} else if raw := kv["path"]; raw != "" {
 				path := filepath.Clean(raw)
 				name := kv["name"]
@@ -188,7 +191,8 @@ func saveTo(p string, c Config) error {
 	b.WriteString("[general]\r\n")
 	fmt.Fprintf(&b, "language = %s\r\n", lang)
 	fmt.Fprintf(&b, "show_hidden = %t\r\n", c.ShowHidden)
-	fmt.Fprintf(&b, "show_dotfiles = %t\r\n\r\n", c.ShowDotfiles)
+	fmt.Fprintf(&b, "show_dotfiles = %t\r\n", c.ShowDotfiles)
+	fmt.Fprintf(&b, "filter = %s\r\n\r\n", c.Filter)
 
 	for i, sh := range c.Shares {
 		fmt.Fprintf(&b, "[share_%d]\r\n", i+1)

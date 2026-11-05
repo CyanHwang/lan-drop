@@ -106,6 +106,9 @@ type StartOptions struct {
 	ShowHidden bool
 	// ShowDotfiles includes entries whose name starts with a dot.
 	ShowDotfiles bool
+	// Filter is the user's exclusion list, e.g. "*.tmp, node_modules". See
+	// ParseFilter for the accepted syntax.
+	Filter string
 }
 
 // Server owns the LAN-facing HTTP listener. It is deliberately separate from
@@ -124,6 +127,7 @@ type Server struct {
 	// is running without a restart; the next request picks them up.
 	showHidden   atomic.Bool
 	showDotfiles atomic.Bool
+	filter       atomic.Value // filterSet
 
 	emit func(name string, data any)
 }
@@ -147,6 +151,20 @@ func (s *Server) L() i18n.Lang {
 func (s *Server) SetViewOptions(showHidden, showDotfiles bool) {
 	s.showHidden.Store(showHidden)
 	s.showDotfiles.Store(showDotfiles)
+}
+
+// SetFilter replaces the exclusion list. Invalid entries are dropped, so this
+// never fails — the field is free text typed by a human.
+func (s *Server) SetFilter(raw string) {
+	s.filter.Store(ParseFilter(raw))
+}
+
+// Filter returns the compiled exclusion list.
+func (s *Server) Filter() filterSet {
+	if v, ok := s.filter.Load().(filterSet); ok {
+		return v
+	}
+	return filterSet{}
 }
 
 // ViewOptions reports the current listing filters.
@@ -249,6 +267,7 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	s.readOnly.Store(opt.ReadOnly)
 	s.showHidden.Store(opt.ShowHidden)
 	s.showDotfiles.Store(opt.ShowDotfiles)
+	s.filter.Store(ParseFilter(opt.Filter))
 
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -276,6 +295,7 @@ func (s *Server) Stop() error {
 	s.readOnly.Store(false)
 	s.showHidden.Store(false)
 	s.showDotfiles.Store(false)
+	s.filter.Store(filterSet{})
 	return err
 }
 

@@ -103,6 +103,7 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	showHidden, showDotfiles := s.ViewOptions()
+	filter := s.Filter()
 
 	entries := make([]Entry, 0, len(dirents))
 	for _, de := range dirents {
@@ -116,6 +117,9 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if !showHidden && isHiddenInfo(info) {
+			continue
+		}
+		if filter.Match(de.Name()) {
 			continue
 		}
 		// Hide dangling or escaping symlinks rather than exposing them.

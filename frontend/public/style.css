@@ -623,7 +623,53 @@ button:disabled {
   outline-offset: 2px;
 }
 
-.view-opts + .btn-row {
+/* Free-text exclusion list. Monospace because the value is a rule
+   expression, not prose. */
+.filter-field {
+  display: block;
+  margin-top: 12px;
+}
+
+.filter-field > span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.filter-input {
+  width: 100%;
+  font: inherit;
+  font-size: 12.5px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 11px;
+  outline: none;
+  transition:
+    border-color 0.16s,
+    background-color 0.16s,
+    box-shadow 0.16s;
+}
+
+.filter-input::placeholder {
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.filter-input:hover {
+  border-color: var(--line-2);
+}
+
+.filter-input:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.filter-field + .btn-row {
   margin-top: 13px;
 }
 
