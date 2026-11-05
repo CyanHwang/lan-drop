@@ -37,8 +37,9 @@ profile.cov
 /frontend/node_modules
 /node_modules
 /frontend/dist
-# Wails regenerates these from the Go service definitions on every build
-/frontend/bindings
+# Wails bindings are committed so a clean checkout builds without the CLI
+# (and therefore without GTK/WebKitGTK on Linux CI). After changing an
+# exported Go method, run `wails3 generate bindings -ts` and commit them.
 /frontend/.vite
 /frontend/*.tsbuildinfo
 npm-debug.log*
@@ -50,7 +51,7 @@ pnpm-debug.log*
 # is the only way a build stays reproducible months later.
 
 # ---------- Local configuration (holds machine-specific paths) ----------
-/config.ini
+/lan-drop.ini
 
 # ---------- Logs and temp files ----------
 *.log

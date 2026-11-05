@@ -17,6 +17,8 @@
 </p>
 <p align="center"><sub>浏览器端界面。主题跟随系统，语言可在顶栏切换。</sub></p>
 
+**本项目全部由 AI 编写。** 仓库中的 Go、TypeScript、CSS、构建配置和文档，每一行都由 AI 生成。
+
 ---
 
 ## 特性
@@ -30,7 +32,7 @@
 | **实时进度** | 桌面端显示每个传输的方向、速度、耗时和对端 IP |
 | **只读模式** | 只给人看，不让网络改你的文件 |
 | **中英双语** | 首次启动自动检测，运行时可切换 |
-| **绿色便携** | 配置存在可执行文件同级的 `config.ini`，拷走即用 |
+| **绿色便携** | 配置存在可执行文件同级的 `lan-drop.ini`，拷走即用 |
 | **常驻托盘** | 关闭窗口不退出，服务继续运行；从托盘菜单退出才停止 |
 | **服务端模式** | 同一个二进制可以不带 GUI 跑在 NAS、树莓派或 Docker 里 |
 
@@ -114,7 +116,7 @@ Lan Drop 服务已启动（读写模式）
 |---|---|---|
 | `-addr` | `:57577` | 监听地址，支持 `:57577`、`0.0.0.0:9000`、`127.0.0.1:57577` |
 | `-share` | 无 | 共享目录，可重复或用逗号分隔；指定后忽略配置文件 |
-| `-config` | 可执行文件同级 `config.ini` | 配置文件路径 |
+| `-config` | 可执行文件同级 `lan-drop.ini` | 配置文件路径 |
 | `-readonly` | `false` | 只读模式：禁止上传、新建文件夹、删除 |
 | `-auto-port` | `false` | 端口被占用时自动向后找；默认直接报错，避免端口漂移 |
 
@@ -127,7 +129,7 @@ docker run --rm -p 57577:57577 -v /host/photos:/data/photos lan-drop -share /dat
 
 ## 配置文件
 
-配置存在**可执行文件同级**的 `config.ini` 里，纯绿色便携。桌面端添加文件夹时会自动写入，也可以直接用记事本改：
+配置存在**可执行文件同级**的 `lan-drop.ini` 里，纯绿色便携。桌面端添加文件夹时会自动写入，也可以直接用记事本改：
 
 ```ini
 ; Lan Drop 局域网快传配置文件
@@ -159,15 +161,18 @@ Windows 上有意义——那里的文件带隐藏属性；Unix 没有这个概�
 filter = *.tmp; node_modules; re:^\.(git|svn)$
 ```
 
-模板见 [`config.ini.example`](config.ini.example)。真正的 `config.ini` 在 `.gitignore` 里——它存的是本机路径，不该进版本库。
+模板见 [`lan-drop.ini.example`](lan-drop.ini.example)。真正的 `lan-drop.ini` 在 `.gitignore` 里——它存的是本机路径，不该进版本库。
+
+旧版本在同目录使用 `config.ini`。首次启动时会读取一次并写出 `lan-drop.ini`，
+旧文件保留不删，方便自行核对。
 
 ### 语言
 
-首次启动时检测操作系统语言并写入 `config.ini`，之后一律以配置里的值为准——改了系统语言也不会在背后把界面换掉。
+首次启动时检测操作系统语言并写入 `lan-drop.ini`，之后一律以配置里的值为准——改了系统语言也不会在背后把界面换掉。
 
 两处可以切换：
 
-- **桌面窗口** —— 顶栏的下拉框，选择会写回 `config.ini`
+- **桌面窗口** —— 顶栏的切换按钮，点击后写回 `lan-drop.ini`
 - **浏览器端** —— 顶栏的切换按钮，按浏览器记在 `localStorage`
 
 浏览器默认使用主机的语言配置；在该浏览器里手动选过就以手动选择为准，且不会写回主机配置。
@@ -208,7 +213,7 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 main.go              Wails 应用入口：托盘、单实例、窗口生命周期
 appservice.go        暴露给前端的服务：目录增删、启停、剪贴板
 main_server.go       -tags server 时的入口：纯 HTTP，无 GUI
-internal/config      config.ini 读写与老版本 JSON 迁移
+internal/config      lan-drop.ini 读写与旧格式迁移
 internal/i18n        消息表与系统语言检测
 internal/transfer    HTTP 服务、路径校验、流式收发、进度上报
   server.go          监听器生命周期、路由注册、路径解析
@@ -240,6 +245,9 @@ go build -tags server .    # 验证服务端模式
 ```
 
 测试覆盖路径穿越、符号链接逃逸、跨共享隔离、续传 409、Range 下载、只读模式，以及翻译表完整性。
+
+`frontend/bindings` 下的 Wails 生成绑定已提交，全新克隆无需安装 CLI 即可构建。
+修改 Go 导出接口后，记得运行 `wails3 generate bindings -ts` 并一起提交。
 
 ## 路线图
 

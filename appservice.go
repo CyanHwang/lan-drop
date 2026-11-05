@@ -41,7 +41,7 @@ type AppService struct {
 }
 
 func NewAppService() *AppService {
-	// EnsureLanguage detects the OS language and writes it to config.ini the
+	// EnsureLanguage detects the OS language and writes it to lan-drop.ini the
 	// first time, so the UI has a concrete language from the very first frame.
 	return &AppService{lang: i18n.Resolve(config.EnsureLanguage())}
 }
@@ -132,7 +132,7 @@ func (a *AppService) Language() string {
 	return string(a.L())
 }
 
-// SetLanguage persists the choice to config.ini and applies it immediately.
+// SetLanguage persists the choice to lan-drop.ini and applies it immediately.
 // Returns the language in effect so the UI can re-render without a second call.
 func (a *AppService) SetLanguage(tag string) (string, error) {
 	next, ok := i18n.Normalize(strings.TrimSpace(tag))

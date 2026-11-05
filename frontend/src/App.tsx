@@ -395,7 +395,7 @@ export default function App() {
   )
 
   // Saved on blur rather than on every keystroke: the value is a free-text
-  // rule list and rewriting config.ini per character would be wasteful.
+  // rule list and rewriting lan-drop.ini per character would be wasteful.
   const commitFilter = useCallback(async () => {
     if (filterDraft === opts.filter) return
     const previous = opts

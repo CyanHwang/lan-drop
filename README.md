@@ -17,6 +17,8 @@ Point Lan Drop at a folder and start the service. The other end opens a browser 
 </p>
 <p align="center"><sub>The browser UI. Theme follows the system; language switches from the top bar.</sub></p>
 
+**Written entirely by AI.** Every line of Go, TypeScript, CSS, build configuration and documentation in this repository was produced by an AI coding agent.
+
 ---
 
 ## Features
@@ -30,7 +32,7 @@ Point Lan Drop at a folder and start the service. The other end opens a browser 
 | **Live progress** | The desktop window shows direction, speed, elapsed time and the peer's IP for every transfer |
 | **Read-only mode** | Serve files without letting the network write to them |
 | **Two languages** | English and Simplified Chinese, detected on first launch and switchable at runtime |
-| **Portable** | Settings live in `config.ini` next to the executable. Copy the folder, keep your setup |
+| **Portable** | Settings live in `lan-drop.ini` next to the executable. Copy the folder, keep your setup |
 | **Tray-resident** | Closing the window keeps the service running; quit from the tray menu to stop it |
 | **Headless mode** | The same binary runs without a GUI on a NAS, a Raspberry Pi or in Docker |
 
@@ -114,7 +116,7 @@ Press Ctrl+C to stop.
 |---|---|---|
 | `-addr` | `:57577` | Listen address: `:57577`, `0.0.0.0:9000`, `127.0.0.1:57577` |
 | `-share` | none | Folder to share. Repeat the flag or separate with commas. Overrides the config file |
-| `-config` | `config.ini` next to the binary | Config file path |
+| `-config` | `lan-drop.ini` next to the binary | Config file path |
 | `-readonly` | `false` | Reject uploads, mkdir and delete |
 | `-auto-port` | `false` | Scan forward when the port is taken. Off by default so containers fail loudly instead of drifting |
 
@@ -127,7 +129,7 @@ docker run --rm -p 57577:57577 -v /host/photos:/data/photos lan-drop -share /dat
 
 ## Configuration
 
-Settings live in `config.ini` **next to the executable**, so the whole thing is portable. The desktop app writes this file when you add or remove a folder; editing it by hand works too.
+Settings live in `lan-drop.ini` **next to the executable**, so the whole thing is portable. The desktop app writes this file when you add or remove a folder; editing it by hand works too.
 
 ```ini
 ; Lan Drop configuration file (portable)
@@ -162,15 +164,18 @@ typo never breaks the listing:
 filter = *.tmp; node_modules; re:^\.(git|svn)$
 ```
 
-See [`config.ini.example`](config.ini.example). The real `config.ini` is git-ignored — it holds machine-specific paths.
+See [`lan-drop.ini.example`](lan-drop.ini.example). The real `lan-drop.ini` is git-ignored — it holds machine-specific paths.
+
+Older builds used `config.ini` in the same directory. On first launch the app
+reads it once and writes `lan-drop.ini`; the old file is left untouched.
 
 ### Language
 
-The OS language is detected on first launch and written to `config.ini`. From then on the stored value wins — changing your system locale will not flip the UI behind your back.
+The OS language is detected on first launch and written to `lan-drop.ini`. From then on the stored value wins — changing your system locale will not flip the UI behind your back.
 
 Two ways to switch:
 
-- **Desktop window** — the picker in the top bar writes the choice back to `config.ini`
+- **Desktop window** — the language toggle in the top bar writes the choice back to `lan-drop.ini`
 - **Browser UI** — a toggle in the top bar, remembered per browser in `localStorage`
 
 The browser starts from the host's configured language. A manual choice in that browser wins, and it never writes to the host's config.
@@ -211,7 +216,7 @@ Both share one `transfer.Server`, which is why the desktop window can show progr
 main.go              Wails entry point: tray, single instance, window lifecycle
 appservice.go        Service exposed to the frontend: folders, start/stop, clipboard
 main_server.go       -tags server entry point: plain HTTP, no GUI
-internal/config      config.ini read/write, legacy JSON migration
+internal/config      lan-drop.ini read/write, legacy migrations
 internal/i18n        Message catalogue and OS language detection
 internal/transfer    HTTP server, path validation, streaming, progress
   server.go          Listener lifecycle, routing, path resolution
@@ -243,6 +248,10 @@ go build -tags server .    # verify the headless build
 ```
 
 Coverage includes path traversal, symlink escapes, cross-share isolation, resume conflicts, `Range` downloads, read-only mode and the translation catalogue.
+
+The generated Wails bindings under `frontend/bindings` are committed so a fresh
+clone builds without the CLI. After changing an exported Go method, run
+`wails3 generate bindings -ts` and commit the result.
 
 ## Roadmap
 

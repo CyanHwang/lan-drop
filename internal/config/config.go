@@ -1,4 +1,4 @@
-// Package config persists the user's settings in a portable config.ini file
+// Package config persists the user's settings in a portable lan-drop.ini file
 // located next to the executable.
 package config
 
@@ -27,7 +27,14 @@ type Config struct {
 	Shares []transfer.Share `json:"shares"`
 }
 
-// FilePath returns the absolute path to config.ini alongside the executable.
+// FileName is the portable settings file kept next to the executable.
+const FileName = "lan-drop.ini"
+
+// legacyININame is the name used before the config file was renamed. It is
+// still read once so existing installations keep their folders.
+const legacyININame = "config.ini"
+
+// FilePath returns the absolute path to lan-drop.ini alongside the executable.
 // If running via `go run` (where the binary is placed in a temp folder), it
 // falls back to the current working directory.
 func FilePath() string {
@@ -39,14 +46,14 @@ func FilePath() string {
 		dir := filepath.Dir(exe)
 		lower := strings.ToLower(dir)
 		if !strings.Contains(lower, "go-build") && !strings.Contains(lower, "temp") {
-			return filepath.Join(dir, "config.ini")
+			return filepath.Join(dir, FileName)
 		}
 	}
-	abs, err := filepath.Abs("config.ini")
+	abs, err := filepath.Abs(FileName)
 	if err == nil {
 		return abs
 	}
-	return "config.ini"
+	return FileName
 }
 
 // legacyJSONPath returns the old %APPDATA%/LanDrop/config.json location.
@@ -62,12 +69,30 @@ func empty() Config {
 	return Config{Shares: []transfer.Share{}}
 }
 
-// Load reads the settings from config.ini. If config.ini does not exist yet but
-// the legacy AppData json file does, it automatically migrates the settings.
+// legacyINIPath returns the pre-rename config.ini next to the current file.
+func legacyINIPath(current string) string {
+	return filepath.Join(filepath.Dir(current), legacyININame)
+}
+
+// Load reads the settings from lan-drop.ini. If that file does not exist yet,
+// it falls back to the earlier config.ini and then to the old AppData JSON.
 func Load() Config {
 	p := FilePath()
 
 	if _, err := os.Stat(p); os.IsNotExist(err) {
+		// Older builds stored the same settings under config.ini. Copy them
+		// under the new name; the old file is left in place so nothing is
+		// lost if the user wants to inspect it.
+		if old := legacyINIPath(p); old != "" {
+			if _, err := os.Stat(old); err == nil {
+				cfg := loadFile(old)
+				if len(cfg.Shares) > 0 || cfg.Language != "" || cfg.Filter != "" ||
+					cfg.ShowHidden || cfg.ShowDotfiles {
+					_ = Save(cfg)
+					return cfg
+				}
+			}
+		}
 		if oldPath := legacyJSONPath(); oldPath != "" {
 			if oldData, err := os.ReadFile(oldPath); err == nil {
 				var legacy Config
@@ -165,7 +190,7 @@ func loadFile(p string) Config {
 	return cfg
 }
 
-// Save writes the settings to config.ini in a clean, human-readable format.
+// Save writes the settings to lan-drop.ini in a clean, human-readable format.
 // Hand-written comments are not preserved: the app rewrites the whole file.
 func Save(c Config) error {
 	return saveTo(FilePath(), c)

@@ -1,6 +1,6 @@
 ﻿; Lan Drop configuration file (portable)
 ;
-; Copy this to config.ini and edit. The desktop app rewrites this file whenever
+; Copy this to lan-drop.ini and edit. The desktop app rewrites this file whenever
 ; you add or remove a folder, so hand editing is optional.
 ;
 ; [general]

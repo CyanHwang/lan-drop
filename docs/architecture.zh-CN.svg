@@ -37,7 +37,7 @@
   <text x="358" y="314" font-size="10.5" fill="#7b8196">内嵌 mobile.html · 无外部静态资源</text>
 
   <rect x="340" y="348" width="150" height="52" rx="9" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>
-  <text x="356" y="369" font-size="11.5" font-weight="600" fill="#14171f">config.ini</text>
+  <text x="356" y="369" font-size="11.5" font-weight="600" fill="#14171f">lan-drop.ini</text>
   <text x="356" y="386" font-size="10.5" fill="#7b8196">可执行文件同级</text>
 
   <rect x="510" y="348" width="150" height="52" rx="9" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>

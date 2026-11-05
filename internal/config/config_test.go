@@ -12,7 +12,7 @@ import (
 
 func writeTemp(t *testing.T, body string) string {
 	t.Helper()
-	p := filepath.Join(t.TempDir(), "config.ini")
+	p := filepath.Join(t.TempDir(), "lan-drop.ini")
 	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ path = /data/docs/
 }
 
 func TestSaveLoadRoundTrip(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "config.ini")
+	p := filepath.Join(t.TempDir(), "lan-drop.ini")
 
 	in := Config{
 		Language: "en",
@@ -117,7 +117,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 // A config without a language must be written with a concrete one, otherwise
 // every launch would re-detect the OS language and ignore a later change.
 func TestSaveFillsLanguageWhenEmpty(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "config.ini")
+	p := filepath.Join(t.TempDir(), "lan-drop.ini")
 	if err := saveTo(p, Config{Shares: []transfer.Share{}}); err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestEnsureLanguageDetectsAndPersists(t *testing.T) {
 }
 
 func TestViewOptionsRoundTrip(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "config.ini")
+	p := filepath.Join(t.TempDir(), "lan-drop.ini")
 
 	if err := saveTo(p, Config{Language: "en", ShowHidden: true, ShowDotfiles: false}); err != nil {
 		t.Fatal(err)
@@ -212,5 +212,42 @@ func TestParseBoolSpellings(t *testing.T) {
 		if parseBool(v) {
 			t.Errorf("parseBool(%q) = true, want false", v)
 		}
+	}
+}
+
+// A pre-rename config.ini is read once and copied to lan-drop.ini. The old
+// file is deliberately left in place, and later loads must use the new one.
+func TestLegacyINIMigration(t *testing.T) {
+	dir := t.TempDir()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+
+	body := "[general]\nlanguage = en\nshow_dotfiles = true\n\n[share_1]\nname = Docs\npath = /data/docs\n"
+	if err := os.WriteFile("config.ini", []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := Load()
+	if len(cfg.Shares) != 1 || cfg.Language != "en" || !cfg.ShowDotfiles {
+		t.Fatalf("migrated config = %+v", cfg)
+	}
+	if _, err := os.Stat("lan-drop.ini"); err != nil {
+		t.Fatalf("new config not written: %v", err)
+	}
+	if _, err := os.Stat("config.ini"); err != nil {
+		t.Fatalf("old config should be preserved: %v", err)
+	}
+
+	if err := os.WriteFile("config.ini", []byte("[general]\nlanguage = zh-CN\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if again := Load(); again.Language != "en" {
+		t.Fatalf("second load = %q, want en from the new file", again.Language)
 	}
 }
