@@ -1,0 +1,1109 @@
+/* ============================================================
+   local-drop — desktop UI
+   Light / dark follow the OS. No toggle, no stored preference.
+   ============================================================ */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f7f9;
+  --bg-glow: rgba(59, 108, 246, 0.07);
+  --surface: #ffffff;
+  --surface-2: #f2f3f6;
+  --surface-3: #e9ebf0;
+  --line: rgba(16, 22, 40, 0.07);
+  --line-2: rgba(16, 22, 40, 0.13);
+  --text: #14171f;
+  --text-2: #414659;
+  --muted: #7b8196;
+  --accent: #3b6cf6;
+  --accent-hover: #2c5ae2;
+  --accent-soft: rgba(59, 108, 246, 0.09);
+  --ok: #0f9d63;
+  --ok-soft: rgba(15, 157, 99, 0.12);
+  --err: #d93a3a;
+  --err-soft: rgba(217, 58, 58, 0.09);
+  --shadow-card: 0 1px 2px rgba(16, 22, 40, 0.04), 0 8px 24px rgba(16, 22, 40, 0.06);
+  --shadow-pop: 0 2px 6px rgba(16, 22, 40, 0.08), 0 18px 44px rgba(16, 22, 40, 0.12);
+  --scroll: rgba(16, 22, 40, 0.16);
+  --scroll-hover: rgba(16, 22, 40, 0.28);
+  --qr-bg: #ffffff;
+  --radius: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #06070f;
+    --bg-glow: rgba(91, 140, 255, 0.1);
+    --surface: #0d0f18;
+    --surface-2: #151826;
+    --surface-3: #1c2030;
+    --line: rgba(255, 255, 255, 0.07);
+    --line-2: rgba(255, 255, 255, 0.13);
+    --text: #e8eaf2;
+    --text-2: #b6bccd;
+    --muted: #767c92;
+    --accent: #5b8cff;
+    --accent-hover: #7aa3ff;
+    --accent-soft: rgba(91, 140, 255, 0.13);
+    --ok: #3ecf8e;
+    --ok-soft: rgba(62, 207, 142, 0.14);
+    --err: #ff5c5c;
+    --err-soft: rgba(255, 92, 92, 0.1);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 10px 30px rgba(0, 0, 0, 0.3);
+    --shadow-pop: 0 2px 8px rgba(0, 0, 0, 0.4), 0 20px 52px rgba(0, 0, 0, 0.55);
+    --scroll: rgba(255, 255, 255, 0.11);
+    --scroll-hover: rgba(255, 255, 255, 0.22);
+    --qr-bg: #ffffff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC",
+    "Hiragino Sans GB", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.28s ease, color 0.28s ease;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(760px 380px at 50% -8%, var(--bg-glow), transparent 68%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background 0.16s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-hover);
+  background-clip: content-box;
+}
+
+/* ---------------- keyframes ---------------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  62% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--ok-soft);
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------- shell ---------------- */
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100%;
+}
+
+/* ---------------- top bar ---------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 26px 17px;
+  --wails-draggable: drag;
+  flex-shrink: 0;
+  animation: rise 0.4s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.topbar.mac {
+  padding-top: 46px;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  user-select: none;
+}
+
+.logo em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 4px 11px 4px 9px;
+  border-radius: 999px;
+  --wails-draggable: no-drag;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.pill.live {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-color: transparent;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.pill.live .dot {
+  background: var(--ok);
+  animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.topbar .spacer {
+  flex: 1;
+}
+
+.topbar .hint {
+  font-size: 12px;
+  color: var(--muted);
+  --wails-draggable: no-drag;
+  user-select: none;
+}
+
+/* Language toggle. A single button showing the language you would switch to,
+   which reads faster than a dropdown and keeps the top bar calm. */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 11px 5px 9px;
+  cursor: pointer;
+  --wails-draggable: no-drag;
+  transition:
+    color 0.18s,
+    border-color 0.18s,
+    background-color 0.18s,
+    transform 0.12s;
+}
+
+.lang-toggle svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.lang-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.lang-toggle:hover svg {
+  opacity: 1;
+}
+
+.lang-toggle:active {
+  transform: scale(0.97);
+}
+
+.lang-toggle:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+/* ---------------- main ---------------- */
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 348px;
+  gap: 18px;
+  padding: 0 26px 18px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Narrow windows: stack the cards and let the whole shell scroll. Keeping the
+   middle row scrollable would compress the cards, because min-height:0 lets
+   the grid squeeze them below their content height. */
+/* Narrow windows: drop out of grid entirely and let the shell scroll. Grid
+   rows would otherwise compress the cards below their content height, because
+   .card sets min-height:0 so the activity list can shrink. */
+@media (max-width: 920px) {
+  .app {
+    display: block;
+    height: 100%;
+    overflow-y: auto;
+  }
+  .main {
+    display: block;
+    overflow: visible;
+  }
+  .main > .card + .card {
+    margin-top: 18px;
+  }
+  .activity {
+    min-height: 180px;
+    overflow: visible;
+  }
+  .activity-list {
+    overflow: visible;
+  }
+  .topbar .hint {
+    display: none;
+  }
+}
+
+/* Short windows: tighten the vertical rhythm so both cards still fit. */
+@media (max-height: 660px) {
+  .topbar {
+    padding-top: 10px;
+    padding-bottom: 12px;
+  }
+  .card {
+    padding: 16px;
+  }
+  .steps {
+    margin-top: 14px;
+    gap: 8px;
+  }
+  .note {
+    display: none;
+  }
+  .qr-frame {
+    width: 158px;
+    height: 158px;
+  }
+}
+
+/* Wide windows: spend the extra space on a larger, easier-to-scan QR code. */
+@media (min-width: 1400px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr) 396px;
+  }
+  .qr-frame {
+    width: 232px;
+    height: 232px;
+  }
+}
+
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: var(--shadow-card);
+  animation: rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  transition: background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+}
+
+.card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.card:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.card-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 13px;
+  user-select: none;
+}
+
+.label-count {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- share list ---------------- */
+
+.share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Four rows exactly (46px each + 6px gaps + 4px padding), so the list never
+     cuts an item in half and imply a scrollbar that isn't obviously there. */
+  max-height: 206px;
+  overflow-y: auto;
+  margin: -2px -4px;
+  padding: 2px 4px;
+}
+
+.share-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 9px 7px 9px 11px;
+  transition: border-color 0.16s, background-color 0.2s;
+}
+
+.share-item:hover {
+  border-color: var(--line-2);
+}
+
+.share-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.share-ico svg {
+  width: 15px;
+  height: 15px;
+}
+
+.share-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.share-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-path {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-empty {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border: 1.5px dashed var(--line-2);
+  border-radius: 11px;
+  color: var(--muted);
+  font-size: 12.5px;
+  transition: border-color 0.16s, color 0.16s, background 0.16s;
+}
+
+.share-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.share-empty svg {
+  width: 15px;
+  height: 15px;
+}
+
+.add-share {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 12.5px;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: color 0.16s, background 0.16s;
+}
+
+.add-share:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.add-share svg {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  flex-shrink: 0;
+  --wails-draggable: no-drag;
+  transition: background 0.16s, color 0.16s, transform 0.12s;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-btn.danger:hover:not(:disabled) {
+  background: var(--err-soft);
+  color: var(--err);
+}
+
+.btn-row {
+  display: flex;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.btn {
+  position: relative;
+  border-radius: 11px;
+  padding: 11px 19px;
+  font-size: 13.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  --wails-draggable: no-drag;
+  transition: background 0.16s, color 0.16s, transform 0.12s, box-shadow 0.16s, opacity 0.16s;
+}
+
+.btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(59, 108, 246, 0.25), 0 6px 16px rgba(59, 108, 246, 0.22);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 2px 4px rgba(59, 108, 246, 0.28), 0 10px 24px rgba(59, 108, 246, 0.28);
+}
+
+.btn.primary:disabled {
+  background: var(--surface-3);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.btn.ghost {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.btn.ghost:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.btn.ghost:disabled {
+  opacity: 0.42;
+}
+
+.btn.danger {
+  background: var(--err-soft);
+  color: var(--err);
+  border: 1px solid transparent;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: var(--err);
+  color: #fff;
+}
+
+.btn .spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  opacity: 0.75;
+}
+
+.err-msg {
+  margin-top: 13px;
+  font-size: 12.5px;
+  color: var(--err);
+  background: var(--err-soft);
+  border-radius: 10px;
+  padding: 10px 13px;
+  animation: slide-in 0.24s ease both;
+}
+
+.steps {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.steps .num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin-top: auto;
+  padding-top: 18px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.note code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 11.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--text-2);
+}
+
+/* ---------------- connect panel ---------------- */
+
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2px 0 16px;
+}
+
+.qr-frame {
+  position: relative;
+  width: 196px;
+  height: 196px;
+  background: var(--qr-bg);
+  border-radius: 14px;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-pop);
+  animation: pop 0.52s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.qr-frame > div {
+  width: 100% !important;
+  height: 100% !important;
+  display: grid;
+  place-items: center;
+}
+
+.qr-frame canvas,
+.qr-frame svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  border-radius: 4px;
+}
+
+.qr-frame.blank {
+  background: var(--surface-2);
+  box-shadow: none;
+  border: 1.5px dashed var(--line-2);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 24px;
+  animation: none;
+  line-height: 1.7;
+}
+
+.urls {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px 9px 12px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--text-2);
+  transition: border-color 0.16s, background-color 0.16s;
+}
+
+.url-row:hover {
+  border-color: var(--line-2);
+}
+
+.url-row .url-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.url-row .copy {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: color 0.16s, background 0.16s;
+}
+
+.url-row .copy:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.url-row .copy.done {
+  color: var(--ok);
+}
+
+.card-hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.75;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+/* ---------------- activity ---------------- */
+
+.activity {
+  border-top: 1px solid var(--line);
+  padding: 13px 0 16px 26px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  animation: rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.18s both;
+  transition: border-color 0.28s;
+}
+
+.activity-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+  padding-right: 26px;
+  flex-shrink: 0;
+}
+
+.activity-head h2 {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+  user-select: none;
+}
+
+.activity-head .count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1.5px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-head .spacer {
+  flex: 1;
+}
+
+.link-btn {
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: color 0.16s, background 0.16s;
+}
+
+.link-btn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.activity-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.act {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 104px;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  animation: slide-in 0.3s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  transition: background 0.16s;
+}
+
+.act:hover {
+  background: var(--surface-2);
+}
+
+.act .dir-ico {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  transition: color 0.2s;
+}
+
+.act.down .dir-ico {
+  color: var(--ok);
+}
+
+.act .dir-ico svg {
+  width: 15px;
+  height: 15px;
+}
+
+.act-body {
+  min-width: 0;
+}
+
+.act-line1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.act-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.act-dir {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 26%;
+}
+
+.act-time {
+  margin-left: auto;
+  padding-left: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.act-bar {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.act-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.22s linear, background-color 0.2s;
+}
+
+.act-bar > i::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: shimmer 1.5s ease-in-out infinite;
+  opacity: 0;
+}
+
+.act.running .act-bar > i::after {
+  opacity: 1;
+}
+
+/* A finished transfer has no progress left to show, so the bar becomes pure
+   noise across the full width. Hide it and let the coloured stat text carry
+   the state instead. */
+.act.done .act-bar,
+.act.failed .act-bar {
+  background: transparent;
+}
+
+.act.done .act-bar > i,
+.act.failed .act-bar > i {
+  background: transparent;
+}
+
+.act.failed .act-bar > i {
+  width: 100% !important;
+}
+
+.act.failed .act-bar > i::after {
+  opacity: 0;
+}
+
+.act-stat {
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.act-stat strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
+}
+
+.act.running .act-stat strong {
+  color: var(--accent);
+}
+
+.act.done .act-stat strong {
+  color: var(--ok);
+}
+
+.act.failed .act-stat strong {
+  color: var(--err);
+}
+
+.activity-empty {
+  margin: auto;
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 30px 44px;
+  text-align: center;
+  border: 1.5px dashed var(--line-2);
+  border-radius: 16px;
+  animation: rise 0.4s ease both;
+  max-width: 440px;
+  line-height: 1.7;
+}
+
+.activity-empty svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+  margin: 0 auto 9px;
+  opacity: 0.4;
+}
+
+/* ---------------- motion preferences ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
