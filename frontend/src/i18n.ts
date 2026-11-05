@@ -10,6 +10,7 @@ type Dict = Record<string, string>
 
 const en: Dict = {
   'app.tagline': 'LAN file transfer',
+  'app.repo': 'Open the GitHub repository',
 
   'status.running': 'Running · {port}',
   'status.stopped': 'Stopped',
@@ -63,6 +64,7 @@ const en: Dict = {
 
 const zh: Dict = {
   'app.tagline': '局域网快传',
+  'app.repo': '打开 GitHub 仓库',
 
   'status.running': '运行中 · {port}',
   'status.stopped': '未启动',

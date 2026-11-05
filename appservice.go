@@ -23,6 +23,9 @@ type ViewOptions struct {
 	Filter       string `json:"filter"`
 }
 
+// repoURL is the project page opened from the top bar.
+const repoURL = "https://github.com/CyanHwang/lan-drop"
+
 // AppService is the bridge between the React desktop UI and the LAN server.
 // It owns the transfer.Server lifetime, the persisted share list, and re-emits
 // transfer progress as Wails events.
@@ -272,6 +275,19 @@ func (a *AppService) CopyText(text string) error {
 		return a.err(i18n.ErrClipboard)
 	}
 	return nil
+}
+
+// OpenRepository opens the project page in the system browser. The URL is a
+// constant rather than a parameter: the frontend never gets to open arbitrary
+// links through the app.
+func (a *AppService) OpenRepository() error {
+	a.mu.Lock()
+	app := a.app
+	a.mu.Unlock()
+	if app == nil {
+		return a.err(i18n.ErrAppNotReady)
+	}
+	return app.Browser.OpenURL(repoURL)
 }
 
 // OpenInBrowser opens the share URL in the system browser.

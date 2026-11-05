@@ -54,6 +54,7 @@ const (
 // Desktop shell strings.
 const (
 	AppDescription   Msg = "app.description"
+	AppRepo          Msg = "app.repo"
 	TrayTooltip      Msg = "tray.tooltip"
 	TrayOpen         Msg = "tray.open"
 	TrayQuit         Msg = "tray.quit"
@@ -112,6 +113,7 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrConfigWrite:       "cannot save configuration: %v",
 
 		AppDescription:   "LAN file transfer",
+		AppRepo:          "Open the GitHub repository",
 		TrayTooltip:      "LanDrop - LAN file transfer",
 		TrayOpen:         "Open LanDrop",
 		TrayQuit:         "Quit LanDrop",
@@ -165,6 +167,7 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrConfigWrite:       "无法保存配置: %v",
 
 		AppDescription:   "局域网快传",
+		AppRepo:          "打开 GitHub 仓库",
 		TrayTooltip:      "LanDrop - 局域网快传",
 		TrayOpen:         "打开 LanDrop",
 		TrayQuit:         "退出 LanDrop",
