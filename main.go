@@ -67,7 +67,7 @@ func main() {
 	}
 
 	app = application.New(application.Options{
-		Name:        "LanDrop",
+		Name:        "Lan Drop",
 		Description: i18n.T(svc.L(), i18n.AppDescription),
 		Services: []application.Service{
 			application.NewService(svc),
@@ -103,7 +103,7 @@ func main() {
 
 	// Create the main window.
 	mainWin = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:     "LanDrop",
+		Title:     "Lan Drop",
 		Width:     1280,
 		Height:    720,
 		MinWidth:  800,
@@ -121,7 +121,7 @@ func main() {
 	// of destroying the window, unless the user explicitly requested Exit.
 	mainWin.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		if atomic.LoadUint32(&isExiting) == 1 {
-			// User clicked "Quit LanDrop" in the tray menu; proceed with real exit.
+			// User clicked "Quit Lan Drop" in the tray menu; proceed with real exit.
 			return
 		}
 		// Intercept the close request and hide the window to the tray.
@@ -144,7 +144,7 @@ func main() {
 	// System tray setup:
 	// - Left click: restore the window.
 	// - Left double-click: restore the window (standard Windows desktop convention).
-	// - Right click menu: "Open LanDrop" + separator + "Quit LanDrop".
+	// - Right click menu: "Open Lan Drop" + separator + "Quit Lan Drop".
 	// The menu is rebuilt whenever the UI language changes.
 	tray := app.SystemTray.New()
 	tray.SetIcon(appIconPNG)

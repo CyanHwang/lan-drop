@@ -74,9 +74,9 @@ jobs:
         run: |
           mkdir -p out
           case "${{ runner.os }}" in
-            Windows) cp bin/landrop.exe "out/LanDrop-${{ matrix.name }}.exe" ;;
-            macOS)   cp bin/*.dmg "out/LanDrop-${{ matrix.name }}.dmg" ;;
-            *)       cp bin/landrop "out/LanDrop-${{ matrix.name }}" ;;
+            Windows) cp "bin/Lan Drop.exe" "out/Lan Drop-${{ matrix.name }}.exe" ;;
+            macOS)   cp bin/*.dmg "out/Lan Drop-${{ matrix.name }}.dmg" ;;
+            *)       cp bin/lan-drop "out/Lan Drop-${{ matrix.name }}" ;;
           esac
           ls -lh out/
 

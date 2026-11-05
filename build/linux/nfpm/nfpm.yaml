@@ -3,7 +3,7 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "landrop"
+name: "lan-drop"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
@@ -11,18 +11,18 @@ section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "Share folders over your local network"
-vendor: "LanDrop"
+vendor: "Lan Drop"
 homepage: "https://github.com/CyanHwang/lan-drop"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/landrop"
-    dst: "/usr/local/bin/landrop"
+  - src: "./bin/lan-drop"
+    dst: "/usr/local/bin/lan-drop"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/landrop.png"
-  - src: "./build/linux/landrop.desktop"
-    dst: "/usr/share/applications/landrop.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/lan-drop.png"
+  - src: "./build/linux/lan-drop.desktop"
+    dst: "/usr/share/applications/lan-drop.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

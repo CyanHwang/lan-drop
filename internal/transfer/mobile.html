@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#06070f" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no">
-<title>LanDrop</title>
+<title>Lan Drop</title>
 <style>
 :root {
   color-scheme: light dark;
@@ -649,7 +649,7 @@ button.action svg { width: 18px; height: 18px; }
 <div class="app">
   <div class="load-bar" id="loadBar" aria-hidden="true"></div>
   <header class="topbar">
-    <div class="brand">Lan<span>Drop</span></div>
+    <div class="brand">Lan <span>Drop</span></div>
     <button class="lang-btn" id="langBtn" type="button" aria-label="Language">EN</button>
     <div class="root-chip"><span class="dot"></span><b id="rootName">Connecting…</b></div>
   </header>
@@ -787,7 +787,9 @@ button.action svg { width: 18px; height: 18px; }
   // Priority: an explicit choice saved in this browser, then the language the
   // host configured, then the browser locale.
   var storedLang = null;
-  try { storedLang = localStorage.getItem("landrop.lang"); } catch (e) { /* private mode */ }
+  try {
+    storedLang = localStorage.getItem("lan-drop.lang") || localStorage.getItem("landrop.lang");
+  } catch (e) { /* private mode */ }
   var lang = normalizeLang(storedLang || navigator.language || "en");
   var shareCount = -1;
   // True once a listing has been painted; from then on loads keep the current
@@ -836,7 +838,7 @@ button.action svg { width: 18px; height: 18px; }
   function setLang(next, remember) {
     lang = next;
     if (remember) {
-      try { localStorage.setItem("landrop.lang", next); } catch (e) { /* ignore */ }
+      try { localStorage.setItem("lan-drop.lang", next); } catch (e) { /* ignore */ }
     }
     document.documentElement.lang = next;
     applyStatic();

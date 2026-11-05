@@ -8,15 +8,15 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="landrop.exe"
+        Path="Lan Drop.exe"
         Arguments=""
-        InstallLocation="C:\Program Files\LanDrop\LanDrop">
+        InstallLocation="C:\Program Files\Lan-Drop\Lan Drop.exe">
     </Installer>
     <PackageInformation
-        PackageName="LanDrop"
-        PackageDisplayName="LanDrop"
-        PublisherName="CN=LanDrop"
-        PublisherDisplayName="LanDrop"
+        PackageName="Lan-Drop"
+        PackageDisplayName="Lan Drop"
+        PublisherName="CN=Lan Drop"
+        PublisherDisplayName="Lan Drop"
         Version="0.1.0.0"
         PackageDescription="Share folders over your local network">
         <Capabilities>
@@ -27,8 +27,8 @@
             <Application
                 Id="io.landrop.app"
                 Description="Share folders over your local network"
-                DisplayName="LanDrop"
-                ExecutableName="landrop.exe"
+                DisplayName="Lan Drop"
+                ExecutableName="Lan Drop.exe"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>LanDrop</DisplayName>
-            <PublisherDisplayName>LanDrop</PublisherDisplayName>
+            <DisplayName>Lan Drop</DisplayName>
+            <PublisherDisplayName>Lan Drop</PublisherDisplayName>
             <Description>Share folders over your local network</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="landrop.msix" />
+    <SaveLocation PackagePath="Lan-Drop.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

@@ -5,11 +5,11 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "LanDrop" # The name of the company
-  productName: "LanDrop" # The name of the application
+  companyName: "Lan Drop" # The name of the company
+  productName: "Lan Drop" # The name of the application
   productIdentifier: "io.landrop.app" # The unique product identifier
   description: "Share folders over your local network" # The application description
-  copyright: "(c) 2026, LanDrop" # Copyright text
+  copyright: "(c) 2026, Lan Drop" # Copyright text
   comments: "" # Comments
   version: "0.1.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
@@ -53,5 +53,5 @@ dev_mode:
       type: primary
       exit_policy: shutdown
 
-# No file associations: LanDrop does not open documents.
+# No file associations: Lan Drop does not open documents.
 fileAssociations: []

@@ -186,7 +186,7 @@ func saveTo(p string, c Config) error {
 	}
 
 	var b strings.Builder
-	b.WriteString("; LanDrop configuration file\n")
+	b.WriteString("; Lan Drop configuration file\n")
 	b.WriteString("; Edit it with any text editor to add or change shared folders.\n\n")
 	b.WriteString("[general]\r\n")
 	fmt.Fprintf(&b, "language = %s\r\n", lang)

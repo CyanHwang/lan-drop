@@ -431,7 +431,7 @@ export default function App() {
     <div className="app">
       <header className={isMac ? 'topbar mac' : 'topbar'}>
         <div className="logo">
-          Lan<em>Drop</em>
+          Lan <em>Drop</em>
         </div>
         <span className={info.running ? 'pill live' : 'pill'}>
           <span className="dot" />

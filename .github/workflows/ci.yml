@@ -52,7 +52,7 @@ jobs:
         run: go test ./... -short -race -count=1
 
       - name: Build server mode
-        run: go build -tags server -trimpath -o /tmp/landrop-server .
+        run: go build -tags server -trimpath -o /tmp/Lan-Drop-server .
 
   cross-build:
     name: Cross-compile (${{ matrix.goos }})
@@ -71,12 +71,12 @@ jobs:
 
       # Server mode has no GUI dependency, so it is the only target that cross-compiles
       # cleanly. It also proves -tags server compiles on every platform.
-      - name: Compile landrop-server
+      - name: Compile Lan-Drop server
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: amd64
           CGO_ENABLED: "0"
-        run: go build -tags server -trimpath -ldflags="-s -w" -o /tmp/landrop-server-${{ matrix.goos }} .
+        run: go build -tags server -trimpath -ldflags="-s -w" -o /tmp/Lan-Drop-server-${{ matrix.goos }} .
 
   lint:
     name: Formatting

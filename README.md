@@ -1,4 +1,4 @@
-# LanDrop
+# Lan Drop
 
 > Share a folder with every device on your network. No client, no account, no cloud.
 
@@ -9,11 +9,11 @@
 [![Wails](https://img.shields.io/badge/Wails-v3-DF0000)](https://v3.wails.io)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#quick-start)
 
-Point LanDrop at a folder and start the service. The other end opens a browser and gets the whole tree: browse, upload, download, and pick up an interrupted transfer where it stopped.
+Point Lan Drop at a folder and start the service. The other end opens a browser and gets the whole tree: browse, upload, download, and pick up an interrupted transfer where it stopped.
 
 <p align="center">
-  <img src="docs/mobile.png" width="300" alt="LanDrop on a phone, light theme">
-  <img src="docs/mobile-dark.png" width="300" alt="LanDrop on a phone, dark theme">
+  <img src="docs/mobile.png" width="300" alt="Lan Drop on a phone, light theme">
+  <img src="docs/mobile-dark.png" width="300" alt="Lan Drop on a phone, dark theme">
 </p>
 <p align="center"><sub>The browser UI. Theme follows the system; language switches from the top bar.</sub></p>
 
@@ -36,7 +36,7 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
 
 ## Why it is small
 
-LanDrop is a [Wails](https://v3.wails.io) v3 application: a Go backend and a
+Lan Drop is a [Wails](https://v3.wails.io) v3 application: a Go backend and a
 React frontend compiled into a single binary.
 
 What matters is what it leaves out. Wails does not bundle a browser engine — it
@@ -53,10 +53,10 @@ few tens of megabytes. An Electron app of comparable scope typically ships
 
 Grab the file for your platform from [Releases](https://github.com/CyanHwang/lan-drop/releases):
 
-- **Windows / Linux** — one executable. Download it and run; there is nothing to unzip
-- **macOS** — a `.dmg` disk image. Open it, drag LanDrop to Applications, done.
+- **Windows / Linux** — one executable, e.g. `Lan Drop-windows-amd64.exe`. Download it and run; there is nothing to unzip. Quote the name on Linux (`chmod +x "Lan Drop-linux-amd64"`)
+- **macOS** — a `.dmg` disk image. Open it, drag Lan Drop to Applications, done.
   The build is unsigned, so the first launch needs a right-click → **Open**, or
-  `xattr -dr com.apple.quarantine /Applications/LanDrop.app`
+  `xattr -dr com.apple.quarantine /Applications/lan-drop.app`
 
 No installer, and no runtime to set up first.
 
@@ -92,12 +92,12 @@ The icon source is `build/appicon.svg`; run `wails3 generate icons` after editin
 No GUI, just the HTTP service. Useful for a NAS, a Raspberry Pi or a container:
 
 ```bash
-go build -tags server -o landrop-server .
-./landrop-server -share /data/photos -share /data/docs
+go build -tags server -o Lan-Drop-server .
+./Lan-Drop-server -share /data/photos -share /data/docs
 ```
 
 ```
-LanDrop is running (read-write)
+Lan Drop is running (read-write)
 
 Shared folders (2):
   photos             /data/photos
@@ -121,8 +121,8 @@ Press Ctrl+C to stop.
 With Docker:
 
 ```bash
-docker build -f build/docker/Dockerfile.server -t landrop .
-docker run --rm -p 57577:57577 -v /host/photos:/data/photos landrop -share /data/photos
+docker build -f build/docker/Dockerfile.server -t lan-drop .
+docker run --rm -p 57577:57577 -v /host/photos:/data/photos lan-drop -share /data/photos
 ```
 
 ## Configuration
@@ -130,7 +130,7 @@ docker run --rm -p 57577:57577 -v /host/photos:/data/photos landrop -share /data
 Settings live in `config.ini` **next to the executable**, so the whole thing is portable. The desktop app writes this file when you add or remove a folder; editing it by hand works too.
 
 ```ini
-; LanDrop configuration file (portable)
+; Lan Drop configuration file (portable)
 
 [general]
 language = en            ; en | zh-CN

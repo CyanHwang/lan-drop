@@ -9,13 +9,13 @@
   
   <Identity 
     Name="io.landrop.app"
-    Publisher="CN=LanDrop"
+    Publisher="CN=Lan Drop"
     Version="0.1.0.0"
     ProcessorArchitecture="x64" />
   
   <Properties>
-    <DisplayName>LanDrop</DisplayName>
-    <PublisherDisplayName>LanDrop</PublisherDisplayName>
+    <DisplayName>Lan Drop</DisplayName>
+    <PublisherDisplayName>Lan Drop</PublisherDisplayName>
     <Description>Share folders over your local network</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -29,9 +29,9 @@
   </Resources>
   
   <Applications>
-    <Application Id="io.landrop.app" Executable="landrop.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="io.landrop.app" Executable="Lan Drop.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="LanDrop"
+        DisplayName="Lan Drop"
         Description="Share folders over your local network"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -41,7 +41,7 @@
       </uap:VisualElements>
       
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="landrop.exe" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="Lan Drop.exe" />
         
         
       </Extensions>

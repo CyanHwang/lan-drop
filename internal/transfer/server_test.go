@@ -103,7 +103,7 @@ func TestUnknownShareRejected(t *testing.T) {
 func TestUploadThenDownload(t *testing.T) {
 	_, base, root, share := newTestServer(t)
 
-	payload := bytes.Repeat([]byte("landrop-"), 90000) // ~0.6 MB
+	payload := bytes.Repeat([]byte("lan-drop-"), 90000) // ~0.6 MB
 	resp := do(t, "PUT", base+"/api/upload?share="+share+"&dir=&name=sample.bin", bytes.NewReader(payload),
 		map[string]string{"X-Offset": "0"})
 	resp.Body.Close()

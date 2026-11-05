@@ -1,7 +1,14 @@
 version: '3'
 
 vars:
-  APP_NAME: "landrop"
+  # Strict-lowercase identifier: Docker image names, npm package names and
+  # Linux package names reject capitals as well as spaces.
+  APP_NAME: "lan-drop"
+  # Product name for contexts that allow capitals but not spaces: the server
+  # binary, installer / MSIX artifact names, container paths.
+  APP_PRODUCT: "Lan-Drop"
+  # User-facing name, also the desktop executable and app bundle name.
+  APP_DISPLAY: "Lan Drop"
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'

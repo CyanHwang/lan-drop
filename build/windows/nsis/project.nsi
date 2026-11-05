@@ -19,13 +19,13 @@ Unicode true
 ####
 ## The following information is taken from the wails_tools.nsh file, but they can be overwritten here.
 ####
-## !define INFO_PROJECTNAME    "my-project" # Default "landrop"
-## !define INFO_COMPANYNAME    "LanDrop" # Default "LanDrop"
-## !define INFO_PRODUCTNAME    "LanDrop" # Default "LanDrop"
+## !define INFO_PROJECTNAME    "my-project" # Default "Lan-Drop"
+## !define INFO_COMPANYNAME    "Lan Drop" # Default "Lan Drop"
+## !define INFO_PRODUCTNAME    "Lan Drop" # Default "Lan Drop"
 ## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.0"
-## !define INFO_COPYRIGHT      "(c) Now, LanDrop" # Default "© 2026, LanDrop"
+## !define INFO_COPYRIGHT      "(c) Now, Lan Drop" # Default "© 2026, Lan Drop"
 ###
-## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
+## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "Lan Drop.exe"
 ## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
 ####
 ## !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html

@@ -7,7 +7,7 @@
 
   <rect width="1000" height="560" fill="#ffffff"/>
 
-  <text x="40" y="44" font-size="19" font-weight="600" fill="#14171f">LanDrop runtime layout</text>
+  <text x="40" y="44" font-size="19" font-weight="600" fill="#14171f">Lan Drop runtime layout</text>
   <text x="40" y="66" font-size="12.5" fill="#7b8196">One Go binary, one listening port, two frontends</text>
 
   <!-- Desktop window -->

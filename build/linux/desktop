@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=LanDrop
+Name=Lan Drop
 Comment=Share folders over your local network
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/landrop %u
+Exec=/usr/local/bin/lan-drop %u
 Terminal=false
 Type=Application
-Icon=landrop
+Icon=lan-drop
 Categories=Utility;
-StartupWMClass=landrop
+StartupWMClass=lan-drop
 
  
