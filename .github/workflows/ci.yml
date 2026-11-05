@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
+
+      # frontend/bindings is generated, not committed, and the React app
+      # imports it directly. It must exist before npm run build.
+      - name: Generate frontend bindings
+        run: wails3 generate bindings -ts
+
+      # main embeds frontend/dist via go:embed; without it go build and go test both fail.
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: go vet (desktop)
+        run: go vet ./...
+
+      - name: go vet (server mode)
+        run: go vet -tags server ./...
+
+      - name: Unit tests
+        run: go test ./... -short -race -count=1
+
+      - name: Build server mode
+        run: go build -tags server -trimpath -o /tmp/landrop-server .
+
+  cross-build:
+    name: Cross-compile (${{ matrix.goos }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      # Server mode has no GUI dependency, so it is the only target that cross-compiles
+      # cleanly. It also proves -tags server compiles on every platform.
+      - name: Compile landrop-server
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build -tags server -trimpath -ldflags="-s -w" -o /tmp/landrop-server-${{ matrix.goos }} .
+
+  lint:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l . | grep -v '^build/' || true)
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted files (run gofmt -w):"
+            echo "$unformatted"
+            exit 1
+          fi
