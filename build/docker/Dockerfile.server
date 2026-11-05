@@ -1,0 +1,35 @@
+# LanDrop server-mode image
+#
+# Builds only the -tags server HTTP service, with no Wails or GUI dependency,
+# which yields a fully static binary that runs on distroless.
+#
+#   docker build -f build/docker/Dockerfile.server -t landrop .
+#   docker run --rm -p 57577:57577 -v /host/photos:/data/photos landrop -share /data/photos
+
+ARG GO_IMAGE=golang:alpine
+ARG RUNTIME_IMAGE=gcr.io/distroless/static-debian12
+
+FROM ${GO_IMAGE} AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache git
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Pure Go build: the server tag excludes main.go, appservice.go and the
+# single-instance helpers.
+RUN CGO_ENABLED=0 go build -tags server,production -trimpath -buildvcs=false \
+      -ldflags="-s -w" -o /landrop-server .
+
+FROM ${RUNTIME_IMAGE}
+
+COPY --from=builder /landrop-server /landrop-server
+
+EXPOSE 57577
+
+ENTRYPOINT ["/landrop-server"]
+CMD ["-addr", ":57577"]

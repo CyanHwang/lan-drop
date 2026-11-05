@@ -1,0 +1,24 @@
+# Normalize line endings: source and scripts stay LF so a .sh checked out on
+# Linux or macOS never fails on a stray CR.
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.ico binary
+*.icns binary
+*.car binary
+*.exe binary
+*.dll binary
+*.dylib binary
+*.so binary
+*.dmg binary
+*.zip binary
+*.gz binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

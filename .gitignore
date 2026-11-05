@@ -1,0 +1,76 @@
+# ---------- Go ----------
+# Compiled binaries and test artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+# Coverage reports
+coverage.txt
+coverage.html
+profile.cov
+# Dependencies (modules are fetched from the proxy; a local vendor dir stays out)
+/vendor
+
+# ---------- Wails build output ----------
+/bin
+/build/bin
+*.app
+*.dmg
+*.msi
+*.msix
+*.AppImage
+*.deb
+*.rpm
+*.snap
+*.flatpak
+# Generated platform projects under build/ (this project ships no mobile target)
+/build/ios
+/build/android
+/build/darwin/*.xcodeproj
+/build/darwin/DerivedData
+/build/windows/nsis/*.nsi.bak
+
+# ---------- Frontend (Vite + React + TypeScript) ----------
+/frontend/node_modules
+/node_modules
+/frontend/dist
+# Wails regenerates these from the Go service definitions on every build
+/frontend/bindings
+/frontend/.vite
+/frontend/*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+# Lockfiles are committed on purpose: npm ci needs one, and pinning the tree
+# is the only way a build stays reproducible months later.
+
+# ---------- Local configuration (holds machine-specific paths) ----------
+/config.ini
+
+# ---------- Logs and temp files ----------
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Editors / IDEs ----------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.iml
+*.sublime-workspace
+
+# ---------- Tool caches ----------
+.task/
+.wails/
+/build/.task/
