@@ -472,12 +472,9 @@ button:disabled {
      row with a 900px progress bar. */
   .pane-activity .activity-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2px 20px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 0 18px;
     align-content: start;
-  }
-  .pane-activity .act {
-    max-width: 400px;
   }
   :root {
     --qr-size: 236px;
@@ -516,7 +513,6 @@ button:disabled {
   .pane-activity .activity-list {
     display: flex;
     flex-direction: column;
-    gap: 1px;
   }
   .topbar .hint {
     display: none;
@@ -1136,7 +1132,7 @@ button:disabled {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 20px 16px 12px;
+  padding: 22px 20px 14px;
   animation: rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.18s both;
 }
 
@@ -1144,28 +1140,29 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-bottom: 9px;
-  padding: 0;
+  padding: 0 2px 13px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
 
 .activity-head h2 {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
   margin: 0;
   user-select: none;
 }
 
 .activity-head .count {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--accent);
   background: var(--accent-soft);
   border-radius: 999px;
-  padding: 1.5px 8px;
+  padding: 2px 8px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1193,163 +1190,173 @@ button:disabled {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
 }
 
+/* A plain list. Hairline separators only — no card chrome, no accent bars. */
 .act {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 104px;
-  align-items: center;
-  gap: 11px;
-  padding: 10px 10px;
-  border-radius: 10px;
   flex-shrink: 0;
+  padding: 13px 3px;
+  border-bottom: 1px solid var(--line);
   animation: slide-in 0.3s cubic-bezier(0.22, 0.8, 0.3, 1) both;
   transition: background 0.16s;
+}
+
+.act:last-child {
+  border-bottom: none;
 }
 
 .act:hover {
   background: var(--surface-2);
 }
 
-.act .dir-ico {
+.act-top {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+}
+
+/* Circular progress doubles as the direction icon, so a transfer needs no
+   horizontal bar and the row stays the same height in every state. */
+.ring {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ring > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--surface-3);
+  stroke-width: 2.5;
+}
+
+.ring-value {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.22s linear, stroke 0.2s;
+}
+
+.ring.down .ring-value {
+  stroke: var(--ok);
+}
+
+.ring.failed .ring-value {
+  stroke: var(--err);
+}
+
+/* Finished rings are a quiet state hint, not a progress indicator. */
+.ring.done .ring-value,
+.ring.failed .ring-value {
+  opacity: 0.35;
+}
+
+.ring-ico {
+  position: relative;
   display: grid;
   place-items: center;
   color: var(--accent);
-  transition: color 0.2s;
 }
 
-.act.down .dir-ico {
+.ring.down .ring-ico {
   color: var(--ok);
 }
 
-.act .dir-ico svg {
-  width: 15px;
-  height: 15px;
+.ring.failed .ring-ico {
+  color: var(--err);
 }
 
-.act-body {
+.ring.done .ring-ico {
+  opacity: 0.65;
+}
+
+.ring-ico svg {
+  width: 14px;
+  height: 14px;
+}
+
+.act-id {
   min-width: 0;
-}
-
-.act-line1 {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.pane-activity .act-dir {
-  display: none;
-}
-
-@media (min-width: 1560px) {
-  .pane-activity .act-dir {
-    display: inline;
-  }
+  flex-direction: column;
+  gap: 3px;
 }
 
 .act-name {
   font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.act-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   min-width: 0;
-  flex: 0 1 auto;
+}
+
+.act-kind {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.act.down .act-kind {
+  color: var(--ok);
+}
+
+.act.failed .act-kind {
+  color: var(--err);
 }
 
 .act-dir {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--muted);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 26%;
-}
-
-.act-time {
-  margin-left: auto;
-  padding-left: 10px;
-  font-size: 11px;
-  color: var(--muted);
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-.act-bar {
-  position: relative;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--surface-3);
-  margin-top: 8px;
-  overflow: hidden;
-}
-
-.act-bar > i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-  transition: width 0.22s linear, background-color 0.2s;
-}
-
-.act-bar > i::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 34%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  animation: shimmer 1.5s ease-in-out infinite;
-  opacity: 0;
-}
-
-.act.running .act-bar > i::after {
-  opacity: 1;
-}
-
-/* A finished transfer has no progress left to show, so the bar becomes pure
-   noise across the full width. Hide it and let the coloured stat text carry
-   the state instead. */
-.act.done .act-bar,
-.act.failed .act-bar {
-  background: transparent;
-}
-
-.act.done .act-bar > i,
-.act.failed .act-bar > i {
-  background: transparent;
-}
-
-.act.failed .act-bar > i {
-  width: 100% !important;
-}
-
-.act.failed .act-bar > i::after {
-  opacity: 0;
 }
 
 .act-stat {
   text-align: right;
-  font-size: 11.5px;
-  color: var(--muted);
+  min-width: 68px;
   font-variant-numeric: tabular-nums;
-  line-height: 1.4;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .act-stat strong {
   display: block;
-  font-size: 12.5px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
   transition: color 0.2s;
+}
+
+.act-stat > span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 112px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .act.running .act-stat strong {
@@ -1364,23 +1371,94 @@ button:disabled {
   color: var(--err);
 }
 
-.activity-empty {
-  margin: auto;
+/* Peer details sit on their own line, aligned under the file name. */
+.act-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  margin: 7px 0 0 45px;
+  font-size: 11px;
   color: var(--muted);
-  font-size: 12.5px;
-  padding: 30px 12px;
-  text-align: center;
-  animation: rise 0.4s ease both;
-  max-width: 320px;
-  line-height: 1.7;
 }
 
-.activity-empty svg {
-  width: 26px;
-  height: 26px;
+.meta-clock,
+.meta-client {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meta-client {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.meta-sep {
+  color: var(--line-2);
+  user-select: none;
+}
+
+.meta-ip {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--text-2);
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.activity-empty {
+  margin: auto;
+  padding: 24px 12px;
+  text-align: center;
+  max-width: 260px;
+  animation: rise 0.4s ease both;
+}
+
+.empty-ico {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.empty-ico svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.7;
+}
+
+.activity-empty strong {
   display: block;
-  margin: 0 auto 9px;
-  opacity: 0.4;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.activity-empty p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+/* A quiet footer closes off the empty half of a tall column. */
+.activity-foot {
+  flex-shrink: 0;
+  margin-top: 10px;
+  padding: 10px 2px 0;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--muted);
+  user-select: none;
 }
 
 /* ---------------- motion preferences ---------------- */

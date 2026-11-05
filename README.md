@@ -27,7 +27,7 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
 | **Multiple folders** | Every shared folder appears under one virtual root, browsable like a normal file tree |
 | **Streaming transfers** | Constant 256 KB of memory. A 100 GB file costs the same as a 1 MB one |
 | **Resumable** | Uploads continue via `X-Offset`; downloads use standard HTTP `Range`. Survives a dropped connection |
-| **Live progress** | The desktop window shows direction, speed and elapsed time for every transfer |
+| **Live progress** | The desktop window shows direction, speed, elapsed time and the peer's IP for every transfer |
 | **Read-only mode** | Serve files without letting the network write to them |
 | **Two languages** | English and Simplified Chinese, detected on first launch and switchable at runtime |
 | **Portable** | Settings live in `config.ini` next to the executable. Copy the folder, keep your setup |
@@ -228,6 +228,7 @@ internal/transfer    HTTP server, path validation, streaming, progress
 - Sharing with a device you do not trust? Start with `-readonly`; write endpoints return `403`
 - Paths are validated twice: lexically against `../`, then through symlink resolution that also covers **not-yet-existing** upload targets
 - Absolute host paths are never sent to clients — the browser only sees folder names
+- The activity list shows each peer's IP and a short device hint derived from `User-Agent`. Both come from the connection itself, are never written to disk, and disappear when the app exits
 - Delete only removes files and empty directories. `os.Remove` is not recursive, and the share root itself is refused
 
 Found a security issue? Open an [issue](https://github.com/CyanHwang/lan-drop/issues) without public exploit details.

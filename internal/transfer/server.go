@@ -76,6 +76,10 @@ type Progress struct {
 	// At is when the transfer started, in unix milliseconds. The UI shows it as
 	// a clock time next to the file name.
 	At int64 `json:"at"`
+	// ClientIP and Client describe the peer that initiated the transfer. They
+	// are informational only, derived from the socket address and User-Agent.
+	ClientIP string `json:"clientIp"`
+	Client   string `json:"client"`
 }
 
 // Entry is one item in a directory listing.
@@ -517,7 +521,7 @@ func (t *throttle) allow() bool {
 	return atomic.CompareAndSwapInt64(&t.last, prev, now)
 }
 
-func (s *Server) newReporter(id, name, dir, share, direction string, total int64) *reporter {
+func (s *Server) newReporter(id, name, dir, share, direction string, total int64, clientIP, client string) *reporter {
 	return &reporter{
 		srv:       s,
 		id:        id,
@@ -527,6 +531,8 @@ func (s *Server) newReporter(id, name, dir, share, direction string, total int64
 		direction: direction,
 		total:     total,
 		start:     time.Now(),
+		clientIP:  clientIP,
+		client:    client,
 	}
 }
 
@@ -539,6 +545,8 @@ type reporter struct {
 	direction string
 	total     int64
 	start     time.Time
+	clientIP  string
+	client    string
 	th        throttle
 }
 
@@ -561,6 +569,8 @@ func (r *reporter) send(loaded int64, done bool, errMsg string) {
 		Speed:     speed,
 		ElapsedMS: elapsed,
 		At:        r.start.UnixMilli(),
+		ClientIP:  r.clientIP,
+		Client:    r.client,
 	})
 }
 

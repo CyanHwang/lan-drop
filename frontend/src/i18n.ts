@@ -54,8 +54,13 @@ const en: Dict = {
   'activity.title': 'Transfers',
   'activity.active': '{count} in progress',
   'activity.clear': 'Clear',
-  'activity.empty': 'No transfers yet. They appear here in real time once a device connects.',
+  'activity.emptyTitle': 'No transfers yet',
+  'activity.empty': 'When a device downloads or uploads a file, it shows up here in real time.',
   'activity.failed': 'Failed',
+  'activity.download': 'Download',
+  'activity.upload': 'Upload',
+  'activity.clientIp': 'Client address',
+  'activity.foot': 'Records are kept for this session only',
 
   'unit.min': '{m}m {s}s',
 
@@ -107,8 +112,13 @@ const zh: Dict = {
   'activity.title': '传输活动',
   'activity.active': '{count} 进行中',
   'activity.clear': '清空',
-  'activity.empty': '还没有传输记录。其它设备连上后会实时显示在这里。',
+  'activity.emptyTitle': '还没有传输记录',
+  'activity.empty': '其它设备下载或上传文件时，会实时显示在这里。',
   'activity.failed': '失败',
+  'activity.download': '下载',
+  'activity.upload': '上传',
+  'activity.clientIp': '客户端地址',
+  'activity.foot': '记录仅保留在本次会话',
 
   'unit.min': '{m} 分 {s} 秒',
 

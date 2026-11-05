@@ -38,6 +38,8 @@ type Progress = {
   speed: number
   elapsedMs: number
   at: number
+  clientIp?: string
+  client?: string
 }
 
 const EMPTY_INFO: Info = { running: false, port: 0, urls: [], since: 0, readOnly: false, shares: [] }
@@ -174,6 +176,32 @@ const ICO_POWER = (
     <path d="M6.4 6.4a8 8 0 1 0 11.2 0" />
   </svg>
 )
+
+const RING_R = 15
+const RING_C = 2 * Math.PI * RING_R
+
+type ActState = 'running' | 'done' | 'failed'
+
+function ProgressRing({ pct, state, down }: { pct: number; state: ActState; down: boolean }) {
+  const shown = state === 'running' ? pct : 100
+  const dash = (Math.min(100, Math.max(0, shown)) / 100) * RING_C
+  return (
+    <span className={`ring ${state} ${down ? 'down' : 'up'}`}>
+      <svg viewBox="0 0 36 36" aria-hidden="true">
+        <circle className="ring-track" cx="18" cy="18" r={RING_R} />
+        <circle
+          className="ring-value"
+          cx="18"
+          cy="18"
+          r={RING_R}
+          strokeDasharray={`${dash} ${RING_C}`}
+          transform="rotate(-90 18 18)"
+        />
+      </svg>
+      <span className="ring-ico">{down ? ICO_DOWN : ICO_UP}</span>
+    </span>
+  )
+}
 
 const ICO_LANG = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -620,44 +648,69 @@ export default function App() {
           <div className="activity-list">
             {items.length === 0 ? (
               <div className="activity-empty">
-                {ICO_IDLE}
-                {t('activity.empty')}
+                <span className="empty-ico">{ICO_IDLE}</span>
+                <strong>{t('activity.emptyTitle')}</strong>
+                <p>{t('activity.empty')}</p>
               </div>
             ) : (
               items.map((x) => {
                 const pct = x.total > 0 ? Math.min(100, (x.loaded / x.total) * 100) : 0
-                const cls = x.done ? (x.error ? 'act failed' : 'act done') : 'act running'
+                const state = x.done ? (x.error ? 'failed' : 'done') : 'running'
+                const cls = `act ${state} ${x.direction === 'down' ? 'down' : 'up'}`
                 const where = [x.share, x.dir].filter(Boolean).join(' / ')
+                const primary = x.error
+                  ? t('activity.failed')
+                  : x.done
+                    ? fmtSize(x.total || x.loaded)
+                    : `${Math.round(pct)}%`
+                const secondary = x.error ? x.error : x.done ? fmtElapsed(x.elapsedMs, t) : fmtSpeed(x.speed)
                 return (
-                  <div className={x.direction === 'down' ? `${cls} down` : cls} key={x.id}>
-                    <span className="dir-ico">{x.direction === 'down' ? ICO_DOWN : ICO_UP}</span>
-                    <div className="act-body">
-                      <div className="act-line1">
+                  <div className={cls} key={x.id}>
+                    <div className="act-top">
+                      <ProgressRing pct={pct} state={state} down={x.direction === 'down'} />
+                      <div className="act-id">
                         <span className="act-name" title={x.name}>
                           {x.name}
                         </span>
-                        {where && <span className="act-dir">{where}</span>}
-                        <span className="act-time">{fmtClock(x.at)}</span>
+                        <div className="act-sub">
+                          <span className="act-kind">
+                            {x.direction === 'down' ? t('activity.download') : t('activity.upload')}
+                          </span>
+                          {where && (
+                            <span className="act-dir" title={where}>
+                              {where}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="act-bar">
-                        <i style={{ width: `${pct}%` }} />
+                      <div className="act-stat">
+                        <strong>{primary}</strong>
+                        <span title={secondary}>{secondary}</span>
                       </div>
                     </div>
-                    <div className="act-stat">
-                      {x.error ? (
-                        <strong>{t('activity.failed')}</strong>
-                      ) : x.done ? (
-                        <strong>{fmtSize(x.total || x.loaded)}</strong>
-                      ) : (
-                        <strong>{Math.round(pct)}%</strong>
+                    <div className="act-meta">
+                      <span className="meta-clock">{fmtClock(x.at)}</span>
+                      {x.clientIp && (
+                        <>
+                          <span className="meta-sep" aria-hidden="true">·</span>
+                          <span className="meta-ip" title={t('activity.clientIp')}>
+                            {x.clientIp}
+                          </span>
+                        </>
                       )}
-                      {x.error ? x.error : x.done ? fmtElapsed(x.elapsedMs, t) : fmtSpeed(x.speed)}
+                      {x.client && (
+                        <>
+                          <span className="meta-sep" aria-hidden="true">·</span>
+                          <span className="meta-client">{x.client}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 )
               })
             )}
           </div>
+          {items.length > 0 && <div className="activity-foot">{t('activity.foot')}</div>}
         </section>
       </div>
     </div>

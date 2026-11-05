@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -253,7 +254,8 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	if dir == "." {
 		dir = ""
 	}
-	rep := s.newReporter(newID(), name, dir, sh.Name, "down", st.Size())
+	ip, client := clientInfo(r)
+	rep := s.newReporter(newID(), name, dir, sh.Name, "down", st.Size(), ip, client)
 	cw := &countWriter{ResponseWriter: w, rep: rep}
 
 	// ServeContent handles Range, If-Modified-Since and ETag for free, which is
@@ -341,7 +343,8 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rep := s.newReporter(newID(), name, dir, sh.Name, "up", total)
+	ip, client := clientInfo(r)
+	rep := s.newReporter(newID(), name, dir, sh.Name, "up", total, ip, client)
 	rep.tick(0)
 
 	written, copyErr := copyStream(f, r.Body, rep)
@@ -426,4 +429,91 @@ func contentDisposition(name string) string {
 	}, name)
 	return fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`,
 		ascii, url.PathEscape(name))
+}
+
+// clientInfo describes the peer for the activity list. RemoteAddr is used
+// rather than X-Forwarded-For: there is no trusted proxy on a LAN, and a
+// forwarded header is trivially spoofed. The UA label is only a hint for
+// telling two devices apart, never a security decision.
+func clientInfo(r *http.Request) (ip, label string) {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	// IPv6 zone suffixes (fe80::1%eth0) are noise in a UI list.
+	if i := strings.IndexByte(host, '%'); i >= 0 {
+		host = host[:i]
+	}
+	if parsed := net.ParseIP(host); parsed != nil {
+		if v4 := parsed.To4(); v4 != nil {
+			host = v4.String() // ::ffff:192.168.1.5 -> 192.168.1.5
+		} else {
+			host = parsed.String()
+		}
+	}
+	return host, clientLabel(r.UserAgent())
+}
+
+// clientLabel reduces a browser UA to two words, e.g. "iPhone Safari".
+// Deliberately approximate: the goal is a recognisable label, not exact
+// browser identification.
+func clientLabel(ua string) string {
+	if ua == "" {
+		return ""
+	}
+	platform := ""
+	switch {
+	case strings.Contains(ua, "iPhone"):
+		platform = "iPhone"
+	case strings.Contains(ua, "iPad"), strings.Contains(ua, "iPod"):
+		platform = "iPad"
+	case strings.Contains(ua, "Android"):
+		platform = "Android"
+	case strings.Contains(ua, "Windows"):
+		platform = "Windows"
+	case strings.Contains(ua, "CrOS"):
+		platform = "Chromebook"
+	case strings.Contains(ua, "Macintosh"), strings.Contains(ua, "Mac OS X"):
+		platform = "macOS"
+	case strings.Contains(ua, "Linux"):
+		platform = "Linux"
+	}
+
+	// Order matters: Edge, Opera, Samsung and WeChat all contain "Chrome",
+	// and Chrome itself contains "Safari".
+	browser := ""
+	switch {
+	case strings.Contains(ua, "Edg/"):
+		browser = "Edge"
+	case strings.Contains(ua, "OPR/"), strings.Contains(ua, "Opera"):
+		browser = "Opera"
+	case strings.Contains(ua, "MicroMessenger"):
+		browser = "WeChat"
+	case strings.Contains(ua, "SamsungBrowser"):
+		browser = "Samsung"
+	case strings.Contains(ua, "Firefox/"), strings.Contains(ua, "FxiOS/"):
+		browser = "Firefox"
+	case strings.Contains(ua, "Chrome/"), strings.Contains(ua, "CriOS/"):
+		browser = "Chrome"
+	case strings.Contains(ua, "Safari/"):
+		browser = "Safari"
+	}
+
+	if platform != "" && browser != "" {
+		return platform + " " + browser
+	}
+	if platform != "" {
+		return platform
+	}
+	if browser != "" {
+		return browser
+	}
+	// curl, download managers, scripts: show the first token, bounded.
+	if i := strings.IndexAny(ua, " /\t"); i > 0 {
+		ua = ua[:i]
+	}
+	if len(ua) > 16 {
+		ua = ua[:16]
+	}
+	return ua
 }
