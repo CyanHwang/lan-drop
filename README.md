@@ -54,7 +54,9 @@ few tens of megabytes. An Electron app of comparable scope typically ships
 Grab the file for your platform from [Releases](https://github.com/CyanHwang/lan-drop/releases):
 
 - **Windows / Linux** — one executable. Download it and run; there is nothing to unzip
-- **macOS** — a `.zip` holding `LanDrop.app`, because a macOS app bundle is a directory rather than a file
+- **macOS** — a `.dmg` disk image. Open it, drag LanDrop to Applications, done.
+  The build is unsigned, so the first launch needs a right-click → **Open**, or
+  `xattr -dr com.apple.quarantine /Applications/LanDrop.app`
 
 No installer, and no runtime to set up first.
 

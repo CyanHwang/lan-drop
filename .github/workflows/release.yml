@@ -53,22 +53,29 @@ jobs:
         run: npm ci
 
       - name: Build application
+        if: runner.os != 'macOS'
         run: wails3 build
+
+      # macOS goes through the package task instead: it builds the .app
+      # bundle and wraps it in a styled .dmg (drag-to-Applications).
+      - name: Build and package disk image (macOS)
+        if: runner.os == 'macOS'
+        run: wails3 task darwin:package:dmg
 
       - name: List artifacts
         shell: bash
         run: ls -la bin/
 
       # Windows and Linux ship one executable, so the download is the program
-      # itself — no unzip step. macOS has to be an archive because an .app is
-      # a directory, not a file.
+      # itself — no unzip step. macOS gets a disk image: open it, drag the app
+      # to Applications, done.
       - name: Prepare release files
         shell: bash
         run: |
           mkdir -p out
           case "${{ runner.os }}" in
             Windows) cp bin/landrop.exe "out/LanDrop-${{ matrix.name }}.exe" ;;
-            macOS)   (cd bin && zip -qry "../out/LanDrop-${{ matrix.name }}.zip" .) ;;
+            macOS)   cp bin/*.dmg "out/LanDrop-${{ matrix.name }}.dmg" ;;
             *)       cp bin/landrop "out/LanDrop-${{ matrix.name }}" ;;
           esac
           ls -lh out/

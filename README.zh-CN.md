@@ -52,7 +52,9 @@ WebView2，macOS 上是 WKWebView，Linux 上是 WebKitGTK。没有 Chromium，�
 到 [Releases](https://github.com/CyanHwang/lan-drop/releases) 下载对应平台的文件：
 
 - **Windows / Linux** —— 单个可执行文件，下载后直接运行，不用解压
-- **macOS** —— `.zip` 包，里面是 `LanDrop.app`（macOS 的应用是目录，做不成单文件）
+- **macOS** —— `.dmg` 磁盘映像，打开后把 LanDrop 拖进「应用程序」即可。
+  构建未做代码签名，首次启动需要右键 →「打开」，或执行
+  `xattr -dr com.apple.quarantine /Applications/LanDrop.app`
 
 不需要安装器，也不用预先装任何运行时。
 
