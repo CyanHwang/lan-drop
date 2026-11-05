@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560" font-family="-apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8892a6"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="560" fill="#ffffff"/>
+
+  <text x="40" y="44" font-size="19" font-weight="600" fill="#14171f">LanDrop 运行时结构</text>
+  <text x="40" y="66" font-size="12.5" fill="#7b8196">一个 Go 二进制，一个监听端口，两个前端</text>
+
+  <!-- 桌面窗口 -->
+  <rect x="30" y="195" width="240" height="150" rx="12" fill="#ffffff" stroke="#dfe3ea" stroke-width="1.5"/>
+  <text x="50" y="224" font-size="13" font-weight="600" fill="#14171f">桌面窗口</text>
+  <text x="50" y="244" font-size="11.5" fill="#7b8196">Wails WebView · React</text>
+  <text x="50" y="272" font-size="11.5" fill="#414659">· 选择共享目录</text>
+  <text x="50" y="292" font-size="11.5" fill="#414659">· 启动 / 停止服务</text>
+  <text x="50" y="312" font-size="11.5" fill="#414659">· 二维码与实时进度</text>
+
+  <!-- Go 进程 -->
+  <rect x="320" y="80" width="360" height="420" rx="14" fill="#f7f9fc" stroke="#c9d3e5" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="342" y="108" font-size="12" font-weight="600" fill="#3b6cf6" letter-spacing="0.4">GO 进程（单二进制）</text>
+
+  <rect x="340" y="122" width="320" height="76" rx="10" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>
+  <text x="358" y="148" font-size="12.5" font-weight="600" fill="#14171f">AppService</text>
+  <text x="358" y="167" font-size="11" fill="#7b8196">目录增删 · 启停 · 剪贴板 · 打开浏览器</text>
+  <text x="358" y="184" font-size="11" fill="#7b8196">把传输进度转成 Wails 事件</text>
+
+  <rect x="340" y="216" width="320" height="112" rx="10" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>
+  <text x="358" y="242" font-size="12.5" font-weight="600" fill="#14171f">transfer.Server</text>
+  <text x="358" y="261" font-size="11" fill="#7b8196">net/http · 流式收发 · 断点续传</text>
+  <rect x="358" y="272" width="118" height="22" rx="5" fill="#eef2ff"/>
+  <text x="367" y="287" font-size="10.5" fill="#3b6cf6" font-family="ui-monospace, Consolas, monospace">/api/list</text>
+  <rect x="484" y="272" width="140" height="22" rx="5" fill="#eef2ff"/>
+  <text x="493" y="287" font-size="10.5" fill="#3b6cf6" font-family="ui-monospace, Consolas, monospace">/api/upload</text>
+  <text x="358" y="314" font-size="10.5" fill="#7b8196">内嵌 mobile.html · 无外部静态资源</text>
+
+  <rect x="340" y="348" width="150" height="52" rx="9" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>
+  <text x="356" y="369" font-size="11.5" font-weight="600" fill="#14171f">config.ini</text>
+  <text x="356" y="386" font-size="10.5" fill="#7b8196">可执行文件同级</text>
+
+  <rect x="510" y="348" width="150" height="52" rx="9" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>
+  <text x="526" y="369" font-size="11.5" font-weight="600" fill="#14171f">共享目录</text>
+  <text x="526" y="386" font-size="10.5" fill="#7b8196">任意数量 · 可只读</text>
+
+  <text x="342" y="434" font-size="10.5" fill="#8892a6">-tags server 时跳过 Wails，只保留下半部分</text>
+  <text x="342" y="452" font-size="10.5" fill="#8892a6">适合 NAS / 树莓派 / Docker</text>
+
+  <!-- 局域网设备 -->
+  <rect x="730" y="195" width="240" height="150" rx="12" fill="#ffffff" stroke="#dfe3ea" stroke-width="1.5"/>
+  <text x="750" y="224" font-size="13" font-weight="600" fill="#14171f">局域网设备</text>
+  <text x="750" y="244" font-size="11.5" fill="#7b8196">浏览器 · 零安装</text>
+  <text x="750" y="272" font-size="11.5" fill="#414659">· 手机 / 平板扫码</text>
+  <text x="750" y="292" font-size="11.5" fill="#414659">· 另一台电脑输地址</text>
+  <text x="750" y="312" font-size="11.5" fill="#414659">· 浏览 · 上传 · 下载</text>
+
+  <!-- 连接线 -->
+  <line x1="270" y1="270" x2="318" y2="270" stroke="#8892a6" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="294" y="256" font-size="10" fill="#7b8196" text-anchor="middle">Wails</text>
+  <text x="294" y="292" font-size="10" fill="#7b8196" text-anchor="middle">方法/事件</text>
+
+  <line x1="682" y1="270" x2="728" y2="270" stroke="#8892a6" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="705" y="256" font-size="10" fill="#7b8196" text-anchor="middle">HTTP</text>
+  <text x="705" y="292" font-size="10" fill="#7b8196" text-anchor="middle">:8787</text>
+
+  <line x1="500" y1="328" x2="500" y2="346" stroke="#c9d3e5" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="612" y="326" font-size="10" fill="#8892a6" text-anchor="middle">读写</text>
+  <line x1="585" y1="328" x2="585" y2="346" stroke="#c9d3e5" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+</svg>

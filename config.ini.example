@@ -1,0 +1,26 @@
+﻿; LanDrop configuration file (portable)
+;
+; Copy this to config.ini and edit. The desktop app rewrites this file whenever
+; you add or remove a folder, so hand editing is optional.
+;
+; [general]
+;   language = en | zh-CN
+;     Detected from the operating system and written here on first launch.
+;     After that the stored value always wins, so changing the OS language
+;     later will not silently switch the UI. The desktop window can change it
+;     from the top bar, which writes back to this file.
+;
+; [share_N]
+;   name = label shown to other devices
+;   path = absolute path on this machine
+
+[general]
+language = en
+
+[share_1]
+name = Downloads
+path = D:\Downloads
+
+[share_2]
+name = Work
+path = D:\Work\Docs
