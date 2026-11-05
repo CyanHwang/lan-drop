@@ -247,6 +247,58 @@ ul.files li + li::before {
   pointer-events: none;
 }
 
+/* Skeleton rows. Same geometry as a real row (38px icon, two text lines) so
+   nothing shifts when the content lands. The sweep is one shared keyframe. */
+ul.files.skeleton li {
+  animation: none;
+  pointer-events: none;
+  cursor: default;
+}
+ul.files.skeleton li:active {
+  background: none;
+  transform: none;
+}
+.sk-ico,
+.sk-line {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.sk-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  flex-shrink: 0;
+}
+.sk-meta {
+  flex: 1;
+  min-width: 0;
+}
+.sk-line {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+}
+.sk-line + .sk-line {
+  margin-top: 9px;
+  height: 9px;
+}
+.sk-line.a { width: 54%; }
+.sk-line.b { width: 31%; }
+.sk-ico::after,
+.sk-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--line-2), transparent);
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-ico::after,
+  .sk-line::after { animation: none; }
+}
+
 .ico {
   width: 38px; height: 38px;
   border-radius: 11px;
@@ -308,7 +360,7 @@ ul.files li + li::before {
 }
 .chev svg { width: 16px; height: 16px; }
 
-.empty, .loading {
+.empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -563,7 +615,15 @@ button.action svg { width: 18px; height: 18px; }
   </header>
   <nav class="crumbs" id="crumbs"></nav>
   <main id="main">
-    <div class="loading" data-i18n="loading">Loading…</div>
+    <!-- Skeleton, not a spinner: it occupies the same space the list will,
+         so the first paint never jumps. Rendered again from JS on navigation. -->
+    <ul class="files skeleton" aria-hidden="true">
+      <li><span class="sk-ico"></span><span class="sk-meta"><i class="sk-line a"></i><i class="sk-line b"></i></span></li>
+      <li><span class="sk-ico"></span><span class="sk-meta"><i class="sk-line a"></i><i class="sk-line b"></i></span></li>
+      <li><span class="sk-ico"></span><span class="sk-meta"><i class="sk-line a"></i><i class="sk-line b"></i></span></li>
+      <li><span class="sk-ico"></span><span class="sk-meta"><i class="sk-line a"></i><i class="sk-line b"></i></span></li>
+      <li><span class="sk-ico"></span><span class="sk-meta"><i class="sk-line a"></i><i class="sk-line b"></i></span></li>
+    </ul>
   </main>
   <div class="sheet" id="sheet">
     <div class="sheet-head">
@@ -574,13 +634,13 @@ button.action svg { width: 18px; height: 18px; }
     <div class="sheet-body" id="sheetBody"></div>
   </div>
   <footer class="dock">
-    <button class="action ghost" id="mkdirBtn" data-i18n-aria="newFolder" aria-label="New folder">
+    <button class="action ghost" id="mkdirBtn" data-i18n-aria="newFolder" aria-label="New folder" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
         <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
         <path d="M12 11v5M9.5 13.5h5"/>
       </svg>
     </button>
-    <button class="action primary" id="uploadBtn">
+    <button class="action primary" id="uploadBtn" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 19V5M6 11l6-6 6 6"/>
       </svg>
@@ -600,7 +660,6 @@ button.action svg { width: 18px; height: 18px; }
   var I18N = {
     en: {
       connecting: "Connecting…",
-      loading: "Loading…",
       upload: "Upload",
       hide: "Hide",
       newFolder: "New folder",
@@ -641,7 +700,6 @@ button.action svg { width: 18px; height: 18px; }
     },
     "zh-CN": {
       connecting: "连接中",
-      loading: "加载中…",
       upload: "上传",
       hide: "收起",
       newFolder: "新建文件夹",
@@ -897,17 +955,52 @@ button.action svg { width: 18px; height: 18px; }
     load(r.share, r.dir);
   }
 
-  // silent skips the loading placeholder, used when the current view is about
-  // to be replaced immediately anyway (the cold-start jump into a lone share).
+  // Same rows the initial page ships, rebuilt for navigation.
+  var skeletonHTML = (function () {
+    var row = '<li><span class="sk-ico"></span><span class="sk-meta">' +
+      '<i class="sk-line a"></i><i class="sk-line b"></i></span></li>';
+    var out = '<ul class="files skeleton" aria-hidden="true">';
+    for (var i = 0; i < 5; i++) out += row;
+    return out + "</ul>";
+  })();
+
+  // Show the skeleton only when a request is slow enough to notice. On a local
+  // network it usually returns in well under 100ms, and flashing a placeholder
+  // for that is worse than showing nothing at all.
+  var skeletonTimer = null;
+
+  function showSkeleton() {
+    cancelSkeleton();
+    skeletonTimer = setTimeout(function () {
+      skeletonTimer = null;
+      $main.innerHTML = skeletonHTML;
+      $main.scrollTop = 0;
+      // Nothing to act on yet; the real render re-enables it.
+      setDockEnabled(false);
+    }, 130);
+  }
+
+  function cancelSkeleton() {
+    if (skeletonTimer) {
+      clearTimeout(skeletonTimer);
+      skeletonTimer = null;
+    }
+  }
+
+  // silent skips the skeleton, used when the current view is about to be
+  // replaced immediately anyway (the cold-start jump into a lone share).
   function load(share, dir, silent) {
     shareId = share || "";
     cwd = dir || "";
-    if (!silent) {
-      $main.innerHTML = '<div class="loading">' + t("loading") + '</div>';
+    if (silent) {
+      cancelSkeleton();
+    } else {
+      showSkeleton();
     }
 
     api("/api/list?share=" + encodeURIComponent(shareId) + "&dir=" + encodeURIComponent(cwd))
       .then(function (data) {
+        cancelSkeleton();
         if (data.mode === "roots") {
           // With exactly one share the virtual root is a pointless extra tap;
           // jump straight in and rewrite the URL so refresh keeps the position.
@@ -930,6 +1023,7 @@ button.action svg { width: 18px; height: 18px; }
         }
       })
       .catch(function (e) {
+        cancelSkeleton();
         $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("openFailed", { err: esc(e.message) }) + "</div>";
       });
   }
