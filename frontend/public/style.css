@@ -193,7 +193,7 @@ button:disabled {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100%;
 }
 
@@ -325,13 +325,47 @@ button:disabled {
 
 /* ---------------- main ---------------- */
 
+/* One panel split into three sections rather than three floating cards:
+   a shared frame with hairline dividers reads calmer and wastes less space.
+   The side columns are equal so the QR sits exactly in the middle. */
 .main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 348px;
-  gap: 18px;
-  padding: 0 26px 18px;
+  grid-template-columns: minmax(0, 1fr) 380px 380px;
+  grid-template-areas: "shares connect activity";
+  gap: 0;
+  margin: 0 26px 22px;
   min-height: 0;
   overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+/* The frame owns the chrome now; the sections only provide padding. */
+.main > .card,
+.main > .activity {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.main > .pane-connect {
+  border-left: 1px solid var(--line-2);
+  border-right: 1px solid var(--line-2);
+}
+
+.pane-shares {
+  grid-area: shares;
+}
+
+.pane-connect {
+  grid-area: connect;
+}
+
+.pane-activity {
+  grid-area: activity;
 }
 
 /* Narrow windows: stack the cards and let the whole shell scroll. Keeping the
@@ -340,28 +374,88 @@ button:disabled {
 /* Narrow windows: drop out of grid entirely and let the shell scroll. Grid
    rows would otherwise compress the cards below their content height, because
    .card sets min-height:0 so the activity list can shrink. */
-@media (max-width: 920px) {
+/* Not enough room for three comfortable columns: transfers drop to a full-width
+   row underneath and the shell scrolls. */
+@media (max-width: 1240px) {
+  /* Scroll the window, not the panel: clipping a framed card mid-row looks
+     like a rendering bug rather than a scrollable area. */
   .app {
     display: block;
     height: 100%;
     overflow-y: auto;
   }
   .main {
-    display: block;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-areas:
+      "shares connect"
+      "activity activity";
+    grid-auto-rows: min-content;
     overflow: visible;
   }
-  .main > .card + .card {
-    margin-top: 18px;
+  .main > .pane-connect {
+    border-right: none;
+  }
+  .main > .pane-activity {
+    min-height: 220px;
+    border-top: 1px solid var(--line-2);
+  }
+  /* Two columns of transfers use the full width far better than one long
+     row with a 900px progress bar. */
+  .pane-activity .activity-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 20px;
+    align-content: start;
+  }
+  .qr-frame {
+    width: 236px;
+    height: 236px;
+  }
+}
+
+/* Single column: the whole window scrolls. */
+@media (max-width: 900px) {
+  .app {
+    display: block;
+    height: 100%;
+    overflow-y: auto;
+  }
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "shares"
+      "connect"
+      "activity";
+    overflow: visible;
+  }
+  .main > .pane-connect {
+    border: none;
+    border-top: 1px solid var(--line-2);
   }
   .activity {
-    min-height: 180px;
+    min-height: 200px;
     overflow: visible;
+  }
+  .main > .pane-activity {
+    border-top: 1px solid var(--line-2);
   }
   .activity-list {
     overflow: visible;
   }
+  .pane-activity .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
   .topbar .hint {
     display: none;
+  }
+  .main {
+    margin: 0 16px 16px;
+  }
+  .qr-frame {
+    width: 190px;
+    height: 190px;
   }
 }
 
@@ -382,19 +476,19 @@ button:disabled {
     display: none;
   }
   .qr-frame {
-    width: 158px;
-    height: 158px;
+    width: 196px;
+    height: 196px;
   }
 }
 
 /* Wide windows: spend the extra space on a larger, easier-to-scan QR code. */
-@media (min-width: 1400px) {
+@media (min-width: 1560px) {
   .main {
-    grid-template-columns: minmax(0, 1fr) 396px;
+    grid-template-columns: minmax(0, 1fr) 420px 380px;
   }
   .qr-frame {
-    width: 232px;
-    height: 232px;
+    width: 300px;
+    height: 300px;
   }
 }
 
@@ -834,8 +928,8 @@ button:disabled {
 }
 
 .note {
-  margin-top: auto;
-  padding-top: 18px;
+  margin-top: 16px;
+  padding-top: 0;
   font-size: 12px;
   color: var(--muted);
   line-height: 1.75;
@@ -857,13 +951,22 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2px 0 16px;
+  padding: 12px 0 18px;
+}
+
+/* Equal flexible space above and below keeps the pair centred in the column. */
+.pane-connect > .qr-wrap {
+  margin-top: auto;
+}
+
+.pane-connect > .urls {
+  margin-bottom: auto;
 }
 
 .qr-frame {
   position: relative;
-  width: 196px;
-  height: 196px;
+  width: 264px;
+  height: 264px;
   background: var(--qr-bg);
   border-radius: 14px;
   padding: 10px;
@@ -964,14 +1067,12 @@ button:disabled {
 /* ---------------- activity ---------------- */
 
 .activity {
-  border-top: 1px solid var(--line);
-  padding: 13px 0 16px 26px;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  padding: 20px 16px 12px;
   animation: rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.18s both;
-  transition: border-color 0.28s;
 }
 
 .activity-head {
@@ -979,7 +1080,7 @@ button:disabled {
   align-items: center;
   gap: 9px;
   margin-bottom: 9px;
-  padding-right: 26px;
+  padding: 0;
   flex-shrink: 0;
 }
 
@@ -1024,7 +1125,7 @@ button:disabled {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding-right: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -1070,6 +1171,16 @@ button:disabled {
   display: flex;
   align-items: baseline;
   gap: 8px;
+}
+
+.pane-activity .act-dir {
+  display: none;
+}
+
+@media (min-width: 1560px) {
+  .pane-activity .act-dir {
+    display: inline;
+  }
 }
 
 .act-name {

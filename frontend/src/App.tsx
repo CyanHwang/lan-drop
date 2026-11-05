@@ -411,7 +411,7 @@ export default function App() {
       </header>
 
       <div className="main">
-        <section className="card">
+        <section className="card pane-shares">
           <div className="card-label">
             {t('shares.title')}
             {shares.length > 0 && <span className="label-count">{shares.length}</span>}
@@ -533,7 +533,7 @@ export default function App() {
           <div className="note">{t('note.firewall')}</div>
         </section>
 
-        <section className="card">
+        <section className="card pane-connect">
           <div className="card-label">{t('connect.title')}</div>
 
           <div className="qr-wrap">
@@ -574,7 +574,7 @@ export default function App() {
         </section>
       </div>
 
-      <section className="activity">
+      <section className="activity pane-activity">
         <div className="activity-head">
           <h2>{t('activity.title')}</h2>
           {items.length > 0 && (
