@@ -741,8 +741,11 @@ button.action svg { width: 18px; height: 18px; }
     applyStatic();
     updateRootChip();
     updateLangButton();
-    // Dynamic rows carry translated labels, so repaint the current view.
-    if (shareId || cwd) load(shareId, cwd);
+    // Dynamic rows carry translated labels, so repaint whatever is on screen.
+    // Unconditional: at the virtual root both shareId and cwd are empty, and
+    // that view needs repainting too. Silent, because the user is looking at
+    // content rather than waiting for a load.
+    load(shareId, cwd, true);
   }
 
   var shareId = "";
@@ -894,10 +897,14 @@ button.action svg { width: 18px; height: 18px; }
     load(r.share, r.dir);
   }
 
-  function load(share, dir) {
+  // silent skips the loading placeholder, used when the current view is about
+  // to be replaced immediately anyway (the cold-start jump into a lone share).
+  function load(share, dir, silent) {
     shareId = share || "";
     cwd = dir || "";
-    $main.innerHTML = '<div class="loading">' + t("loading") + '</div>';
+    if (!silent) {
+      $main.innerHTML = '<div class="loading">' + t("loading") + '</div>';
+    }
 
     api("/api/list?share=" + encodeURIComponent(shareId) + "&dir=" + encodeURIComponent(cwd))
       .then(function (data) {
@@ -908,7 +915,7 @@ button.action svg { width: 18px; height: 18px; }
             coldStart = false;
             var only = data.roots[0].id;
             history.replaceState(null, "", buildHash(only, ""));
-            load(only, "");
+            load(only, "", true);
             return;
           }
           shareName = "";
@@ -1308,33 +1315,32 @@ button.action svg { width: 18px; height: 18px; }
     $sheet.classList.add("show");
   }
 
-  api("/api/info").then(function (d) {
-    if (!d) return;
-    readOnly = !!d.readOnly;
-    if (typeof d.count === "number") shareCount = d.count;
-
-    // Adopt the host's configured language unless this browser already stored
-    // an explicit choice.
-    if (!storedLang && d.lang && normalizeLang(d.lang) !== lang) {
-      setLang(normalizeLang(d.lang), false);
-    } else {
+  // Bootstrap. Everything the first paint needs — language, read-only flag,
+  // share count — is resolved before anything is rendered. Doing it after the
+  // first render used to fire a second full list request and show the loading
+  // placeholder twice, which read as the page refreshing on its own.
+  api("/api/info")
+    .then(function (d) {
+      if (!d) return;
+      readOnly = !!d.readOnly;
+      if (typeof d.count === "number") shareCount = d.count;
+      // Adopt the host's language unless this browser already stored an
+      // explicit choice.
+      if (!storedLang && d.lang) lang = normalizeLang(d.lang);
+    })
+    .catch(function () { /* keep the browser language */ })
+    .then(function () {
+      document.documentElement.lang = lang;
+      applyStatic();
+      updateLangButton();
       updateRootChip();
-      // Re-render so the delete buttons disappear if the first paint beat the
-      // info request.
-      if (readOnly && (shareId || cwd)) load(shareId, cwd);
-    }
-  }).catch(function () { /* ignore */ });
+      window.addEventListener("hashchange", onRoute);
+      onRoute();
+    });
 
   $langBtn.addEventListener("click", function () {
     setLang(lang === "en" ? "zh-CN" : "en", true);
   });
-
-  applyStatic();
-  updateLangButton();
-  updateRootChip();
-
-  window.addEventListener("hashchange", onRoute);
-  onRoute();
 })();
 </script>
 </body>
