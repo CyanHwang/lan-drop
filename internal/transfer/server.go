@@ -129,7 +129,32 @@ type Server struct {
 	showDotfiles atomic.Bool
 	filter       atomic.Value // filterSet
 
+	ips ipCache
+
 	emit func(name string, data any)
+}
+
+// ipCache memoises the LAN address list. Enumerating adapters costs ~15ms on
+// Windows, and /api/info is hit on every page load and every desktop status
+// refresh, so recomputing it per request is pure waste. The TTL keeps a
+// network switch (Wi-Fi to Ethernet, VPN up) reflected within seconds.
+type ipCache struct {
+	mu  sync.Mutex
+	ips []string
+	at  time.Time
+}
+
+const ipCacheTTL = 5 * time.Second
+
+func (c *ipCache) get() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ips != nil && time.Since(c.at) < ipCacheTTL {
+		return c.ips
+	}
+	c.ips = LANIPs()
+	c.at = time.Now()
+	return c.ips
 }
 
 // New builds a server. emit may be nil; it is only used to notify the desktop UI.
@@ -254,9 +279,11 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 
 	srv := &http.Server{
 		Handler: mux,
-		// Only the header read is bounded. Read/Write timeouts must stay zero:
-		// a multi-gigabyte transfer is a single long-lived request.
+		// Only the header read and idle keep-alives are bounded. Read/Write
+		// timeouts must stay zero: a multi-gigabyte transfer is a single
+		// long-lived request.
 		ReadHeaderTimeout: 15 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	s.shares = validated
@@ -309,8 +336,9 @@ func (s *Server) infoLocked() Info {
 	if s.httpSrv == nil {
 		return EmptyInfo()
 	}
-	urls := make([]string, 0, 4)
-	for _, ip := range LANIPs() {
+	ips := s.ips.get()
+	urls := make([]string, 0, len(ips))
+	for _, ip := range ips {
 		urls = append(urls, fmt.Sprintf("http://%s:%d", ip, s.port))
 	}
 	shares := make([]Share, len(s.shares))

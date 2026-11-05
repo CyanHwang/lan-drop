@@ -1199,6 +1199,21 @@ button.action svg { width: 18px; height: 18px; }
         lastLoaded: 0
       });
     }
+
+    // Keep the list bounded: the sheet rebuilds every row on each progress
+    // tick, so an unbounded array quietly slows down a long session.
+    while (tasks.length > 60) {
+      var dropAt = -1;
+      for (var d = 0; d < tasks.length; d++) {
+        if (tasks[d].state === "done" || tasks[d].state === "err") {
+          dropAt = d;
+          break;
+        }
+      }
+      if (dropAt < 0) break;
+      tasks.splice(dropAt, 1);
+    }
+
     renderSheet();
     pump();
   });
@@ -1405,7 +1420,9 @@ button.action svg { width: 18px; height: 18px; }
         '<div class="task-sub">' + esc(sub) + "</div>" +
         "</div>";
     }
+    var scroll = $sheetBody.scrollTop;
     $sheetBody.innerHTML = html;
+    if ($sheetBody.scrollTop !== scroll) $sheetBody.scrollTop = scroll;
     $sheet.classList.add("show");
   }
 

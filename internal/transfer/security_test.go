@@ -12,7 +12,7 @@ import (
 
 // newServerAt starts a server rooted at an explicit directory so tests can
 // plant symlinks before the listener comes up.
-func newServerAt(t *testing.T, root string, opt StartOptions) (*Server, string) {
+func newServerAt(t testing.TB, root string, opt StartOptions) (*Server, string) {
 	t.Helper()
 	s := New(nil)
 	info, err := s.StartWithOptions([]Share{{ID: "test", Name: "test", Path: root}}, opt)

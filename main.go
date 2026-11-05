@@ -97,10 +97,10 @@ func main() {
 	// Create the main window.
 	mainWin = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "LanDrop",
-		Width:     1320,
-		Height:    820,
-		MinWidth:  1000,
-		MinHeight: 640,
+		Width:     1280,
+		Height:    720,
+		MinWidth:  800,
+		MinHeight: 600,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
