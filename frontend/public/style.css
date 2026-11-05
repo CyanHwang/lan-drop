@@ -28,6 +28,7 @@
   --scroll: rgba(16, 22, 40, 0.16);
   --scroll-hover: rgba(16, 22, 40, 0.28);
   --qr-bg: #ffffff;
+  --qr-size: 300px;
   --radius: 16px;
 }
 
@@ -204,6 +205,7 @@ button:disabled {
   align-items: center;
   gap: 12px;
   padding: 15px 26px 17px;
+  border-bottom: 1px solid var(--line);
   --wails-draggable: drag;
   flex-shrink: 0;
   animation: rise 0.4s cubic-bezier(0.22, 0.8, 0.3, 1) both;
@@ -325,30 +327,25 @@ button:disabled {
 
 /* ---------------- main ---------------- */
 
-/* One panel split into three sections rather than three floating cards:
-   a shared frame with hairline dividers reads calmer and wastes less space.
-   The side columns are equal so the QR sits exactly in the middle. */
+/* Three sections, no frame: the window edge is the frame. Dividers do the
+   separating, and the QR gets a wider column than the rest. */
 .main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px 380px;
+  grid-template-columns: minmax(0, 1fr) 440px 400px;
   grid-template-areas: "shares connect activity";
   gap: 0;
-  margin: 0 26px 22px;
+  margin: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
 }
 
-/* The frame owns the chrome now; the sections only provide padding. */
 .main > .card,
 .main > .activity {
-  background: transparent;
+  background: var(--surface);
   border: none;
   border-radius: 0;
   box-shadow: none;
+  padding: 22px 26px;
 }
 
 .main > .pane-connect {
@@ -407,9 +404,11 @@ button:disabled {
     gap: 2px 20px;
     align-content: start;
   }
-  .qr-frame {
-    width: 236px;
-    height: 236px;
+  .pane-activity .act {
+    max-width: 400px;
+  }
+  :root {
+    --qr-size: 236px;
   }
 }
 
@@ -450,12 +449,8 @@ button:disabled {
   .topbar .hint {
     display: none;
   }
-  .main {
-    margin: 0 16px 16px;
-  }
-  .qr-frame {
-    width: 190px;
-    height: 190px;
+  :root {
+    --qr-size: 190px;
   }
 }
 
@@ -475,20 +470,18 @@ button:disabled {
   .note {
     display: none;
   }
-  .qr-frame {
-    width: 196px;
-    height: 196px;
+  :root {
+    --qr-size: 190px;
   }
 }
 
 /* Wide windows: spend the extra space on a larger, easier-to-scan QR code. */
 @media (min-width: 1560px) {
   .main {
-    grid-template-columns: minmax(0, 1fr) 420px 380px;
+    grid-template-columns: minmax(0, 1fr) 480px 420px;
   }
-  .qr-frame {
-    width: 300px;
-    height: 300px;
+  :root {
+    --qr-size: 340px;
   }
 }
 
@@ -965,8 +958,8 @@ button:disabled {
 
 .qr-frame {
   position: relative;
-  width: 264px;
-  height: 264px;
+  width: var(--qr-size);
+  height: var(--qr-size);
   background: var(--qr-bg);
   border-radius: 14px;
   padding: 10px;
@@ -1303,12 +1296,10 @@ button:disabled {
   margin: auto;
   color: var(--muted);
   font-size: 12.5px;
-  padding: 30px 44px;
+  padding: 30px 12px;
   text-align: center;
-  border: 1.5px dashed var(--line-2);
-  border-radius: 16px;
   animation: rise 0.4s ease both;
-  max-width: 440px;
+  max-width: 320px;
   line-height: 1.7;
 }
 
