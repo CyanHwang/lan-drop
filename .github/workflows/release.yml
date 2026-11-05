@@ -18,13 +18,10 @@ jobs:
         include:
           - os: windows-latest
             name: windows-amd64
-            archive: LanDrop-windows-amd64.zip
           - os: macos-latest
             name: macos-universal
-            archive: LanDrop-macos.zip
           - os: ubuntu-latest
             name: linux-amd64
-            archive: LanDrop-linux-amd64.tar.gz
 
     steps:
       - uses: actions/checkout@v4
@@ -62,25 +59,24 @@ jobs:
         shell: bash
         run: ls -la bin/
 
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Compress-Archive -Path bin/* -DestinationPath ${{ matrix.archive }}
-
-      - name: Package (macOS / Linux)
-        if: runner.os != 'Windows'
+      # Windows and Linux ship one executable, so the download is the program
+      # itself — no unzip step. macOS has to be an archive because an .app is
+      # a directory, not a file.
+      - name: Prepare release files
         shell: bash
         run: |
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            (cd bin && zip -qry "../${{ matrix.archive }}" .)
-          else
-            tar -czf "${{ matrix.archive }}" -C bin .
-          fi
+          mkdir -p out
+          case "${{ runner.os }}" in
+            Windows) cp bin/landrop.exe "out/LanDrop-${{ matrix.name }}.exe" ;;
+            macOS)   (cd bin && zip -qry "../out/LanDrop-${{ matrix.name }}.zip" .) ;;
+            *)       cp bin/landrop "out/LanDrop-${{ matrix.name }}" ;;
+          esac
+          ls -lh out/
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.archive }}
+          files: out/*
           generate_release_notes: true
           draft: false
         env:

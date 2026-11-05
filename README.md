@@ -31,13 +31,32 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
 | **Read-only mode** | Serve files without letting the network write to them |
 | **Two languages** | English and Simplified Chinese, detected on first launch and switchable at runtime |
 | **Portable** | Settings live in `config.ini` next to the executable. Copy the folder, keep your setup |
+| **Tray-resident** | Closing the window keeps the service running; quit from the tray menu to stop it |
 | **Headless mode** | The same binary runs without a GUI on a NAS, a Raspberry Pi or in Docker |
+
+## Why it is small
+
+LanDrop is a [Wails](https://v3.wails.io) v3 application: a Go backend and a
+React frontend compiled into a single binary.
+
+What matters is what it leaves out. Wails does not bundle a browser engine — it
+drives the one already on the system: WebView2 on Windows, WKWebView on macOS,
+WebKitGTK on Linux. No Chromium, no Node runtime, no `node_modules` at runtime.
+
+The result is an executable of about 13 MB that starts instantly and idles at a
+few tens of megabytes. An Electron app of comparable scope typically ships
+100 MB or more before it touches a single one of your files.
 
 ## Quick start
 
 ### Download
 
-Grab the archive for your platform from [Releases](https://github.com/CyanHwang/lan-drop/releases). Windows builds are portable — unzip and run.
+Grab the file for your platform from [Releases](https://github.com/CyanHwang/lan-drop/releases):
+
+- **Windows / Linux** — one executable. Download it and run; there is nothing to unzip
+- **macOS** — a `.zip` holding `LanDrop.app`, because a macOS app bundle is a directory rather than a file
+
+No installer, and no runtime to set up first.
 
 On first launch the OS may ask for firewall or network permission. **You must allow it**, otherwise no other device can connect.
 
@@ -170,6 +189,8 @@ The browser page and every endpoint share one port. No extra services.
 | GET | `/api/info` | Status, share count, read-only flag, language |
 
 **Resume contract**: `X-Offset` must equal the exact byte count on disk. Otherwise the server returns `409` with the real size and the client restarts from there.
+
+The browser client decides where to resume by asking how many bytes the server already holds for that *file name*. Picking a different file with the same name therefore continues from the wrong offset — there is no content hash to tell them apart.
 
 There is no API version prefix and no CORS headers — the endpoints exist for the embedded page, not for third parties.
 
