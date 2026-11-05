@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#06070f" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<title>LanDrop</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --bg-glow: rgba(59,108,246,.07);
+  --surface: #ffffff;
+  --surface-2: #f2f3f6;
+  --surface-3: #e9ebf0;
+  --line: rgba(16,22,40,.07);
+  --line-2: rgba(16,22,40,.13);
+  --text: #14171f;
+  --text-2: #414659;
+  --muted: #7b8196;
+  --accent: #3b6cf6;
+  --accent-soft: rgba(59,108,246,.09);
+  --ok: #0f9d63;
+  --ok-soft: rgba(15,157,99,.12);
+  --err: #d93a3a;
+  --err-soft: rgba(217,58,58,.09);
+  --shadow: 0 1px 2px rgba(16,22,40,.04), 0 8px 24px rgba(16,22,40,.06);
+  --shadow-pop: 0 2px 8px rgba(16,22,40,.08), 0 20px 48px rgba(16,22,40,.14);
+  --radius: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #06070f;
+    --bg-glow: rgba(91,140,255,.1);
+    --surface: #0d0f18;
+    --surface-2: #151826;
+    --surface-3: #1c2030;
+    --line: rgba(255,255,255,.07);
+    --line-2: rgba(255,255,255,.13);
+    --text: #e8eaf2;
+    --text-2: #b6bccd;
+    --muted: #767c92;
+    --accent: #5b8cff;
+    --accent-soft: rgba(91,140,255,.13);
+    --ok: #3ecf8e;
+    --ok-soft: rgba(62,207,142,.14);
+    --err: #ff5c5c;
+    --err-soft: rgba(255,92,92,.1);
+    --shadow: 0 1px 2px rgba(0,0,0,.28), 0 10px 30px rgba(0,0,0,.3);
+    --shadow-pop: 0 2px 8px rgba(0,0,0,.4), 0 20px 52px rgba(0,0,0,.55);
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .26s ease, color .26s ease;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(520px 260px at 50% -6%, var(--bg-glow), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheet-up {
+  from { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 760px;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- top ---------- */
+
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 16px) 18px 8px;
+}
+
+.brand {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  user-select: none;
+}
+.brand span { color: var(--accent); }
+
+.root-chip {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+  max-width: 52%;
+  transition: background-color .2s, border-color .2s;
+}
+.root-chip b {
+  font-weight: 500;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.root-chip .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+
+/* Compact language toggle: shows the language you would switch TO, which is
+   clearer than labelling the current one. */
+.lang-btn {
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 4px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color .2s, border-color .2s;
+}
+.lang-btn:hover { color: var(--text-2); border-color: var(--accent); }
+.lang-btn:active { transform: scale(.96); }
+
+/* ---------- breadcrumbs ---------- */
+
+.crumbs {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 14px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-size: 13px;
+}
+.crumbs::-webkit-scrollbar { display: none; }
+
+.crumbs button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .16s, color .16s;
+}
+.crumbs button:active { background: var(--surface-2); }
+.crumbs button.current { color: var(--text); font-weight: 500; }
+.crumbs .sep { color: var(--line-2); flex-shrink: 0; font-size: 11px; }
+
+/* ---------- list ---------- */
+
+main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 12px 16px;
+}
+
+ul.files { list-style: none; margin: 0; padding: 0; }
+
+ul.files li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  animation: item-in .34s cubic-bezier(.22,.8,.3,1) both;
+  transition: background-color .16s, transform .1s;
+}
+ul.files li:active {
+  background: var(--surface-2);
+  transform: scale(.985);
+}
+ul.files li + li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 62px;
+  right: 12px;
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+
+.ico {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: background-color .2s, box-shadow .2s;
+}
+.ico.dir {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+.ico svg { width: 19px; height: 19px; }
+
+.meta { min-width: 0; flex: 1; }
+.name {
+  display: block;
+  font-size: 14.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-actions {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+}
+.act-btn {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  padding: 9px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background .16s, color .16s, transform .1s;
+}
+.act-btn:active { transform: scale(.88); }
+.act-btn.dl:active { background: var(--accent-soft); color: var(--accent); }
+.act-btn.del:active { background: var(--err-soft); color: var(--err); }
+.act-btn svg { width: 16px; height: 16px; display: block; }
+
+.chev {
+  color: var(--muted);
+  opacity: .4;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.chev svg { width: 16px; height: 16px; }
+
+.empty, .loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 64px 24px;
+  animation: fade-in .3s ease both;
+}
+.empty svg { width: 30px; height: 30px; opacity: .35; }
+
+/* ---------- dock ---------- */
+
+.dock {
+  flex-shrink: 0;
+  display: flex;
+  gap: 9px;
+  padding: 10px 14px calc(env(safe-area-inset-bottom) + 12px);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color .26s, background-color .26s;
+}
+
+button.action {
+  border: 0;
+  border-radius: 13px;
+  padding: 15px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  touch-action: manipulation;
+  transition: transform .12s, opacity .16s, background-color .16s;
+}
+button.action:active { transform: scale(.97); }
+button.action:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+button.action:disabled:active { transform: none; }
+
+button.action.primary {
+  flex: 1;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 2px 6px rgba(59,108,246,.28), 0 10px 24px rgba(59,108,246,.22);
+}
+button.action.primary:active { opacity: .88; }
+
+button.action.ghost {
+  flex: 0 0 auto;
+  padding: 15px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+button.action svg { width: 18px; height: 18px; }
+
+/* ---------- upload sheet ---------- */
+
+.sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 20px);
+  max-width: 740px;
+  bottom: calc(env(safe-area-inset-bottom) + 86px);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 4px;
+  max-height: 46vh;
+  display: none;
+  flex-direction: column;
+  z-index: 20;
+  box-shadow: var(--shadow-pop);
+  animation: sheet-up .28s cubic-bezier(.22,.8,.3,1) both;
+}
+.sheet.show { display: flex; }
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.sheet-head b {
+  font-weight: 500;
+  color: var(--text);
+  font-size: 12.5px;
+}
+.sheet-head .spacer { flex: 1; }
+.sheet-head button {
+  border: 0; background: none; color: var(--muted);
+  font: inherit; font-size: 12px;
+  padding: 3px 7px; border-radius: 7px; cursor: pointer;
+}
+.sheet-head button:active { background: var(--surface-2); }
+
+.sheet-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 4px 4px;
+}
+
+.task { padding: 9px 8px 10px; }
+.task + .task { border-top: 1px solid var(--line); }
+
+.task-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+.task-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-pct {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.bar {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .2s linear, background-color .2s;
+}
+.bar > i::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 34%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: shimmer 1.5s ease-in-out infinite;
+  opacity: 0;
+}
+.task.run .bar > i::after { opacity: 1; }
+.task.done .bar > i { background: var(--ok); }
+.task.done .bar > i::after { opacity: 0; }
+.task.err .bar > i { background: var(--err); width: 100% !important; }
+.task.err .bar > i::after { opacity: 0; }
+
+.task-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.task.err .task-sub { color: var(--err); }
+
+/* ---------- toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 168px);
+  transform: translate(-50%, 10px);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 22px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 30;
+  max-width: 84vw;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  animation: toast-in .24s cubic-bezier(.22,.8,.3,1);
+}
+
+/* ---------- wide screens ---------- */
+
+@media (min-width: 760px) {
+  .app { max-width: 900px; }
+  .topbar { padding-left: 22px; padding-right: 22px; }
+  .crumbs { padding-left: 18px; padding-right: 18px; }
+  main { padding-left: 16px; padding-right: 16px; }
+
+  ul.files {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 10px;
+    row-gap: 2px;
+  }
+  ul.files li + li::before { display: none; }
+
+  .dock { justify-content: center; }
+  .dock .action.primary { flex: 0 1 420px; }
+}
+
+@media (min-width: 1180px) {
+  .app { max-width: 1220px; }
+  ul.files { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1560px) {
+  .app { max-width: 1560px; }
+  ul.files { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">Lan<span>Drop</span></div>
+    <button class="lang-btn" id="langBtn" type="button" aria-label="Language">EN</button>
+    <div class="root-chip"><span class="dot"></span><b id="rootName">Connecting…</b></div>
+  </header>
+  <nav class="crumbs" id="crumbs"></nav>
+  <main id="main">
+    <div class="loading" data-i18n="loading">Loading…</div>
+  </main>
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <b id="sheetTitle" data-i18n="upload">Upload</b>
+      <span class="spacer"></span>
+      <button id="sheetClose" type="button" data-i18n="hide">Hide</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+  <footer class="dock">
+    <button class="action ghost" id="mkdirBtn" data-i18n-aria="newFolder" aria-label="New folder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <path d="M12 11v5M9.5 13.5h5"/>
+      </svg>
+    </button>
+    <button class="action primary" id="uploadBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 19V5M6 11l6-6 6 6"/>
+      </svg>
+      <span data-i18n="uploadFiles">Upload files</span>
+    </button>
+    <input type="file" id="fileInput" multiple hidden>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- i18n ---------------- */
+
+  var I18N = {
+    en: {
+      connecting: "Connecting…",
+      loading: "Loading…",
+      upload: "Upload",
+      hide: "Hide",
+      newFolder: "New folder",
+      uploadFiles: "Upload files",
+      root: "Home",
+      noShares: "No shared folders yet",
+      sharedFolder: "Shared folder",
+      emptyFolder: "This folder is empty",
+      folder: "Folder",
+      download: "Download",
+      delete: "Delete",
+      confirmDelete: "Delete \u201c{name}\u201d? This cannot be undone.",
+      deleted: "Deleted",
+      deleteFailed: "Delete failed: {err}",
+      downloadStarted: "Downloading {name}",
+      enterShare: "Open a shared folder first",
+      newFolderName: "New folder name",
+      created: "Created",
+      createFailed: "Create failed: {err}",
+      connLost: "Connection lost",
+      cancelled: "Cancelled",
+      resuming: "Resuming {name}",
+      filesFailed: "{n} file(s) failed",
+      filesUploaded: "Uploaded {n} file(s)",
+      uploading: "Uploading {done}/{total}",
+      uploadDone: "Upload complete",
+      uploadCount: "Upload {done}/{total}",
+      done: "Done · {size}",
+      failed: "Failed: {err}",
+      unknownError: "unknown error",
+      waiting: "Waiting · {size}",
+      shareCount: "{n} shared folder(s)",
+      notConfigured: "Not configured",
+      readOnly: "read-only",
+      openFailed: "Cannot open: {err}",
+      monthDay: "{m}/{d}",
+      switchTo: "中"
+    },
+    "zh-CN": {
+      connecting: "连接中",
+      loading: "加载中…",
+      upload: "上传",
+      hide: "收起",
+      newFolder: "新建文件夹",
+      uploadFiles: "上传文件",
+      root: "根目录",
+      noShares: "还没有共享目录",
+      sharedFolder: "共享目录",
+      emptyFolder: "这个文件夹是空的",
+      folder: "文件夹",
+      download: "下载",
+      delete: "删除",
+      confirmDelete: "删除 \u201c{name}\u201d？此操作不可恢复。",
+      deleted: "已删除",
+      deleteFailed: "删除失败：{err}",
+      downloadStarted: "开始下载 {name}",
+      enterShare: "先进入一个共享目录",
+      newFolderName: "新建文件夹名称",
+      created: "已创建",
+      createFailed: "创建失败：{err}",
+      connLost: "连接中断",
+      cancelled: "已取消",
+      resuming: "继续传输 {name}",
+      filesFailed: "{n} 个文件失败",
+      filesUploaded: "已上传 {n} 个文件",
+      uploading: "正在上传 {done}/{total}",
+      uploadDone: "上传完成",
+      uploadCount: "上传 {done}/{total}",
+      done: "完成 · {size}",
+      failed: "失败：{err}",
+      unknownError: "未知错误",
+      waiting: "等待中 · {size}",
+      shareCount: "{n} 个共享目录",
+      notConfigured: "未配置",
+      readOnly: "只读",
+      openFailed: "打不开：{err}",
+      monthDay: "{m}月{d}日",
+      switchTo: "EN"
+    }
+  };
+
+  function normalizeLang(tag) {
+    return String(tag || "").toLowerCase().indexOf("zh") === 0 ? "zh-CN" : "en";
+  }
+
+  // Priority: an explicit choice saved in this browser, then the language the
+  // host configured, then the browser locale.
+  var storedLang = null;
+  try { storedLang = localStorage.getItem("landrop.lang"); } catch (e) { /* private mode */ }
+  var lang = normalizeLang(storedLang || navigator.language || "en");
+  var shareCount = -1;
+
+  function t(key, vars) {
+    var table = I18N[lang] || I18N.en;
+    var text = table[key] || I18N.en[key] || key;
+    if (vars) {
+      for (var k in vars) {
+        if (Object.prototype.hasOwnProperty.call(vars, k)) {
+          text = text.split("{" + k + "}").join(String(vars[k]));
+        }
+      }
+    }
+    return text;
+  }
+
+  // Replaces every element tagged with data-i18n / data-i18n-aria.
+  function applyStatic() {
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = t(nodes[i].getAttribute("data-i18n"));
+    }
+    var aria = document.querySelectorAll("[data-i18n-aria]");
+    for (var j = 0; j < aria.length; j++) {
+      aria[j].setAttribute("aria-label", t(aria[j].getAttribute("data-i18n-aria")));
+    }
+  }
+
+  function updateRootChip() {
+    var label = shareCount > 0
+      ? t("shareCount", { n: shareCount })
+      : (shareCount === 0 ? t("notConfigured") : t("connecting"));
+    if (readOnly) label += " · " + t("readOnly");
+    $rootName.textContent = label;
+  }
+
+  function updateLangButton() {
+    if (!$langBtn) return;
+    $langBtn.textContent = t("switchTo");
+    $langBtn.setAttribute("aria-label", lang === "en" ? "Switch to Chinese" : "Switch to English");
+  }
+
+  function setLang(next, remember) {
+    lang = next;
+    if (remember) {
+      try { localStorage.setItem("landrop.lang", next); } catch (e) { /* ignore */ }
+    }
+    document.documentElement.lang = next;
+    applyStatic();
+    updateRootChip();
+    updateLangButton();
+    // Dynamic rows carry translated labels, so repaint the current view.
+    if (shareId || cwd) load(shareId, cwd);
+  }
+
+  var shareId = "";
+  var shareName = "";
+  var cwd = "";
+  // Set once from /api/info. Read-only servers hide every mutating control so
+  // the UI never offers an action the server will reject.
+  var readOnly = false;
+  var tasks = [];
+  var taskSeq = 0;
+  var uploading = false;
+  // A lone share is entered directly only on a cold visit, i.e. when the URL
+  // carries no hash yet. Once the URL points at the virtual root (#/), the
+  // user asked for the list and it has to stay put — including across a
+  // reload. That is why this is derived from the URL rather than remembered
+  // in a variable, which a refresh would reset.
+  var coldStart = location.hash === "" || location.hash === "#";
+
+  var $main = document.getElementById("main");
+  var $crumbs = document.getElementById("crumbs");
+  var $sheet = document.getElementById("sheet");
+  var $sheetBody = document.getElementById("sheetBody");
+  var $sheetTitle = document.getElementById("sheetTitle");
+  var $toast = document.getElementById("toast");
+  var $fileInput = document.getElementById("fileInput");
+  var $rootName = document.getElementById("rootName");
+  var $langBtn = document.getElementById("langBtn");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function fmtSize(n) {
+    if (!n) return "0 B";
+    if (n < 1024) return n + " B";
+    var u = ["KB", "MB", "GB", "TB"];
+    var i = -1;
+    do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+    return n.toFixed(n < 10 ? 1 : 0) + " " + u[i];
+  }
+
+  function fmtTime(ms) {
+    if (!ms) return "";
+    var d = new Date(ms), now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    }
+    if (d.getFullYear() === now.getFullYear()) {
+      return t("monthDay", { m: d.getMonth() + 1, d: d.getDate() });
+    }
+    return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    $toast.textContent = msg;
+    $toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { $toast.classList.remove("show"); }, 2200);
+  }
+
+  var ICO_DIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+  var ICO_FILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+  var ICO_IMAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-4.5-4.5L7 20"/></svg>';
+  var ICO_VIDEO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="13" height="14" rx="2.5"/><path d="M15.5 10l6-3.5v11l-6-3.5"/></svg>';
+  var ICO_AUDIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>';
+  var ICO_ZIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 6h2M10 9h2M10 12h2M10 15h2"/></svg>';
+  var ICO_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h4.5"/></svg>';
+  var ICO_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
+  var ICO_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
+  var ICO_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+  var ICO_EMPTY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+
+  var EXT_MAP = {
+    img: ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "svg", "avif", "tiff"],
+    vid: ["mp4", "mov", "mkv", "avi", "webm", "m4v", "flv", "wmv"],
+    aud: ["mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "wma"],
+    zip: ["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "iso"],
+    doc: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md", "csv", "json"]
+  };
+
+  function fileIcon(name) {
+    var i = name.lastIndexOf(".");
+    if (i < 0) return ICO_FILE;
+    var ext = name.slice(i + 1).toLowerCase();
+    if (EXT_MAP.img.indexOf(ext) >= 0) return ICO_IMAGE;
+    if (EXT_MAP.vid.indexOf(ext) >= 0) return ICO_VIDEO;
+    if (EXT_MAP.aud.indexOf(ext) >= 0) return ICO_AUDIO;
+    if (EXT_MAP.zip.indexOf(ext) >= 0) return ICO_ZIP;
+    if (EXT_MAP.doc.indexOf(ext) >= 0) return ICO_DOC;
+    return ICO_FILE;
+  }
+
+  function join(dir, name) {
+    return dir ? dir + "/" + name : name;
+  }
+
+  // Upload and mkdir need a target share; they are meaningless at the virtual root.
+  function setDockEnabled(on) {
+    var usable = on && !readOnly;
+    document.getElementById("uploadBtn").disabled = !usable;
+    document.getElementById("mkdirBtn").disabled = !usable;
+  }
+
+  function api(path) {
+    return fetch(path, { headers: { Accept: "application/json" } }).then(function (r) {
+      return r.json().then(function (data) {
+        if (!r.ok) throw new Error(data && data.error ? data.error : ("HTTP " + r.status));
+        return data;
+      });
+    });
+  }
+
+  /* ---------------- routing ---------------- */
+
+  function parseHash() {
+    var h = location.hash.replace(/^#\/?/, "");
+    if (!h) return { share: "", dir: "" };
+    var parts = h.split("/");
+    if (parts[0] === "s" && parts[1]) {
+      var dir = parts.slice(2).map(decodeURIComponent).join("/");
+      return { share: decodeURIComponent(parts[1]), dir: dir };
+    }
+    return { share: "", dir: "" };
+  }
+
+  function buildHash(share, dir) {
+    if (!share) return "#/";
+    var h = "#/s/" + encodeURIComponent(share);
+    if (dir) {
+      h += "/" + dir.split("/").map(encodeURIComponent).join("/");
+    }
+    return h;
+  }
+
+  function nav(share, dir) {
+    var h = buildHash(share, dir);
+    if (location.hash === h) {
+      load(share, dir);
+    } else {
+      location.hash = h;
+    }
+  }
+
+  function onRoute() {
+    var r = parseHash();
+    load(r.share, r.dir);
+  }
+
+  function load(share, dir) {
+    shareId = share || "";
+    cwd = dir || "";
+    $main.innerHTML = '<div class="loading">' + t("loading") + '</div>';
+
+    api("/api/list?share=" + encodeURIComponent(shareId) + "&dir=" + encodeURIComponent(cwd))
+      .then(function (data) {
+        if (data.mode === "roots") {
+          // With exactly one share the virtual root is a pointless extra tap;
+          // jump straight in and rewrite the URL so refresh keeps the position.
+          if (data.roots.length === 1 && coldStart) {
+            coldStart = false;
+            var only = data.roots[0].id;
+            history.replaceState(null, "", buildHash(only, ""));
+            load(only, "");
+            return;
+          }
+          shareName = "";
+          renderCrumbs();
+          renderRoots(data);
+        } else {
+          shareId = data.share || "";
+          shareName = data.shareName || "";
+          cwd = data.dir || "";
+          renderCrumbs();
+          renderFiles(data);
+        }
+      })
+      .catch(function (e) {
+        $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("openFailed", { err: esc(e.message) }) + "</div>";
+      });
+  }
+
+  function renderCrumbs() {
+    var html = '<button data-go-root class="' + (shareName ? "" : "current") + '">' + t("root") + '</button>';
+    if (shareName) {
+      html += '<span class="sep">/</span><button data-go-share class="' + (cwd ? "" : "current") + '">' +
+        esc(shareName) + "</button>";
+      if (cwd) {
+        var parts = cwd.split("/");
+        var acc = "";
+        for (var i = 0; i < parts.length; i++) {
+          acc = acc ? acc + "/" + parts[i] : parts[i];
+          html += '<span class="sep">/</span><button data-go-dir="' + esc(acc) + '" class="' +
+            (i === parts.length - 1 ? "current" : "") + '">' + esc(parts[i]) + "</button>";
+        }
+      }
+    }
+    $crumbs.innerHTML = html;
+  }
+
+  function renderRoots(data) {
+    setDockEnabled(false);
+    if (!data.roots || !data.roots.length) {
+      $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("noShares") + "</div>";
+      return;
+    }
+    var html = '<ul class="files">';
+    for (var i = 0; i < data.roots.length; i++) {
+      var r = data.roots[i];
+      html += '<li data-share="' + esc(r.id) + '" style="animation-delay:' +
+        (Math.min(i, 9) * 0.022).toFixed(3) + 's">' +
+        '<span class="ico dir">' + ICO_DIR + "</span>" +
+        '<span class="meta"><span class="name">' + esc(r.name) + "</span>" +
+        '<span class="sub">' + t("sharedFolder") + '</span></span>' +
+        '<span class="chev">' + ICO_CHEV + "</span>" +
+        "</li>";
+    }
+    html += "</ul>";
+    $main.innerHTML = html;
+    $main.scrollTop = 0;
+  }
+
+  function renderFiles(data) {
+    setDockEnabled(true);
+    if (!data.entries.length) {
+      $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("emptyFolder") + "</div>";
+      return;
+    }
+    var html = '<ul class="files">';
+    for (var i = 0; i < data.entries.length; i++) {
+      var e = data.entries[i];
+      var rel = join(cwd, e.name);
+      var sub = e.isDir ? t("folder") : fmtSize(e.size);
+      if (e.modTime) sub += " · " + fmtTime(e.modTime);
+      var delay = Math.min(i, 9) * 0.022;
+
+      var actions = '<span class="row-actions">';
+      if (!e.isDir) {
+        actions += '<button class="act-btn dl" data-dl="' + esc(rel) +
+          '" aria-label="' + t("download") + '">' + ICO_DOWNLOAD + "</button>";
+      }
+      if (!readOnly) {
+        actions += '<button class="act-btn del" data-del="' + esc(rel) +
+          '" aria-label="' + t("delete") + '">' + ICO_DEL + "</button>";
+      }
+      actions += "</span>";
+
+      html += '<li data-rel="' + esc(rel) + '" data-dir="' + (e.isDir ? "1" : "0") +
+        '" style="animation-delay:' + delay.toFixed(3) + 's">' +
+        '<span class="ico' + (e.isDir ? " dir" : "") + '">' + (e.isDir ? ICO_DIR : fileIcon(e.name)) + "</span>" +
+        '<span class="meta"><span class="name">' + esc(e.name) + "</span>" +
+        '<span class="sub">' + esc(sub) + "</span></span>" +
+        actions +
+        "</li>";
+    }
+    html += "</ul>";
+    $main.innerHTML = html;
+    $main.scrollTop = 0;
+  }
+
+  $crumbs.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button");
+    if (!b) return;
+    if (b.hasAttribute("data-go-root")) {
+      nav("", "");
+    } else if (b.hasAttribute("data-go-share")) {
+      nav(shareId, "");
+    } else if (b.hasAttribute("data-go-dir")) {
+      nav(shareId, b.getAttribute("data-go-dir"));
+    }
+  });
+
+  $main.addEventListener("click", function (ev) {
+    var dl = ev.target.closest("button[data-dl]");
+    if (dl) {
+      ev.stopPropagation();
+      downloadFile(dl.getAttribute("data-dl"));
+      return;
+    }
+
+    var del = ev.target.closest("button[data-del]");
+    if (del) {
+      ev.stopPropagation();
+      var rel = del.getAttribute("data-del");
+      if (confirm(t("confirmDelete", { name: rel.split("/").pop() }))) {
+        fetch("/api/file?share=" + encodeURIComponent(shareId) + "&path=" + encodeURIComponent(rel), {
+          method: "DELETE"
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.error) throw new Error(d.error);
+            toast(t("deleted"));
+            load(shareId, cwd);
+          })
+          .catch(function (e) { toast(t("deleteFailed", { err: e.message })); });
+      }
+      return;
+    }
+
+    var root = ev.target.closest("li[data-share]");
+    if (root) {
+      nav(root.getAttribute("data-share"), "");
+      return;
+    }
+
+    // Tapping a file row no longer downloads it — that is what the download
+    // button is for. Only directories navigate.
+    var li = ev.target.closest("li[data-rel]");
+    if (!li) return;
+    if (li.getAttribute("data-dir") === "1") {
+      nav(shareId, li.getAttribute("data-rel"));
+    }
+  });
+
+  function downloadFile(rel) {
+    var name = rel.split("/").pop();
+    var a = document.createElement("a");
+    a.href = "/api/download?share=" + encodeURIComponent(shareId) + "&path=" + encodeURIComponent(rel);
+    a.download = name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast(t("downloadStarted", { name: name }));
+  }
+
+  document.getElementById("uploadBtn").addEventListener("click", function () {
+    if (!shareId) {
+      toast(t("enterShare"));
+      return;
+    }
+    $fileInput.click();
+  });
+
+  $fileInput.addEventListener("change", function () {
+    var files = Array.prototype.slice.call($fileInput.files || []);
+    $fileInput.value = "";
+    if (!files.length) return;
+    for (var i = 0; i < files.length; i++) {
+      tasks.push({
+        id: ++taskSeq,
+        file: files[i],
+        share: shareId,
+        dir: cwd,
+        loaded: 0,
+        total: files[i].size,
+        state: "wait",
+        speed: 0,
+        err: "",
+        lastTime: 0,
+        lastLoaded: 0
+      });
+    }
+    renderSheet();
+    pump();
+  });
+
+  document.getElementById("mkdirBtn").addEventListener("click", function () {
+    if (!shareId) {
+      toast(t("enterShare"));
+      return;
+    }
+    var name = prompt(t("newFolderName"));
+    if (!name) return;
+    fetch("/api/mkdir?share=" + encodeURIComponent(shareId) +
+      "&dir=" + encodeURIComponent(cwd) + "&name=" + encodeURIComponent(name), { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) throw new Error(d.error);
+        toast(t("created"));
+        load(shareId, cwd);
+      })
+      .catch(function (e) { toast(t("createFailed", { err: e.message })); });
+  });
+
+  document.getElementById("sheetClose").addEventListener("click", function () {
+    $sheet.classList.remove("show");
+  });
+
+  function probe(share, dir, name) {
+    return api("/api/probe?share=" + encodeURIComponent(share) +
+      "&dir=" + encodeURIComponent(dir) + "&name=" + encodeURIComponent(name));
+  }
+
+  function putChunk(task, offset, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("PUT", "/api/upload?share=" + encodeURIComponent(task.share) +
+        "&dir=" + encodeURIComponent(task.dir) + "&name=" + encodeURIComponent(task.file.name));
+      xhr.setRequestHeader("X-Offset", String(offset));
+      xhr.setRequestHeader("X-Total-Size", String(task.file.size));
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) onProgress(offset + e.loaded);
+      };
+      xhr.onload = function () {
+        var body = null;
+        try { body = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
+        if (xhr.status === 200) {
+          resolve({ ok: true, size: body && body.size });
+        } else if (xhr.status === 409 && body) {
+          resolve({ conflict: true, size: body.size || 0 });
+        } else {
+          reject(new Error((body && body.error) || ("HTTP " + xhr.status)));
+        }
+      };
+      xhr.onerror = function () { reject(new Error(t("connLost"))); };
+      xhr.onabort = function () { reject(new Error(t("cancelled"))); };
+      xhr.timeout = 0;
+
+      xhr.send(task.file.slice(offset));
+    });
+  }
+
+  function sleep(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  async function uploadOne(task) {
+    task.state = "run";
+    task.err = "";
+    task.lastTime = Date.now();
+    task.lastLoaded = 0;
+    renderSheet();
+
+    var offset = 0;
+    try {
+      var p = await probe(task.share, task.dir, task.file.name);
+      if (p.exists && p.size > 0 && p.size < task.file.size) {
+        offset = p.size;
+        toast(t("resuming", { name: task.file.name }));
+      } else if (p.exists && p.size === task.file.size) {
+        task.state = "done";
+        task.loaded = task.total;
+        renderSheet();
+        return;
+      }
+    } catch (_) {
+      offset = 0;
+    }
+
+    task.loaded = offset;
+    var lastPaint = 0;
+
+    for (var attempt = 0; attempt < 6; attempt++) {
+      try {
+        var res = await putChunk(task, offset, function (loaded) {
+          var now = Date.now();
+          var dt = now - task.lastTime;
+          if (dt > 400) {
+            task.speed = (loaded - task.lastLoaded) * 1000 / dt;
+            task.lastTime = now;
+            task.lastLoaded = loaded;
+          }
+          task.loaded = loaded;
+          if (now - lastPaint > 110) {
+            lastPaint = now;
+            renderSheet();
+          }
+        });
+
+        if (res.conflict) {
+          offset = res.size;
+          task.loaded = offset;
+          task.lastLoaded = offset;
+          task.lastTime = Date.now();
+          renderSheet();
+          continue;
+        }
+
+        task.state = "done";
+        task.loaded = task.total;
+        renderSheet();
+        return;
+      } catch (e) {
+        task.err = e.message;
+        renderSheet();
+        if (attempt === 5) {
+          task.state = "err";
+          renderSheet();
+          return;
+        }
+        await sleep(800 * (attempt + 1));
+        try {
+          var again = await probe(task.share, task.dir, task.file.name);
+          offset = again.size || 0;
+          task.loaded = offset;
+          task.lastLoaded = offset;
+          task.lastTime = Date.now();
+        } catch (_) { /* keep previous offset */ }
+      }
+    }
+  }
+
+  async function pump() {
+    if (uploading) return;
+    uploading = true;
+    $sheet.classList.add("show");
+    while (true) {
+      var next = null;
+      for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].state === "wait") { next = tasks[i]; break; }
+      }
+      if (!next) break;
+      await uploadOne(next);
+    }
+    uploading = false;
+
+    var failed = tasks.filter(function (t) { return t.state === "err"; }).length;
+    var doneCount = tasks.filter(function (t) { return t.state === "done"; }).length;
+    if (failed) toast(t("filesFailed", { n: failed }));
+    else if (doneCount) toast(t("filesUploaded", { n: doneCount }));
+
+    load(shareId, cwd);
+    setTimeout(function () {
+      if (!uploading) {
+        tasks = tasks.filter(function (t) { return t.state === "err"; });
+        renderSheet();
+        if (!tasks.length) $sheet.classList.remove("show");
+      }
+    }, 2600);
+  }
+
+  function renderSheet() {
+    if (!tasks.length) {
+      $sheet.classList.remove("show");
+      $sheetBody.innerHTML = "";
+      return;
+    }
+
+    var done = tasks.filter(function (x) { return x.state === "done"; }).length;
+    var running = tasks.filter(function (x) { return x.state === "run"; }).length;
+    $sheetTitle.textContent = running > 0
+      ? t("uploading", { done: done, total: tasks.length })
+      : (done === tasks.length ? t("uploadDone") : t("uploadCount", { done: done, total: tasks.length }));
+
+    var html = "";
+    for (var i = 0; i < tasks.length; i++) {
+      // Named "task" rather than "t": "t" is the translation function.
+      var task = tasks[i];
+      var pct = task.total ? Math.min(100, Math.round(task.loaded / task.total * 100)) : 0;
+      var cls = task.state === "done" ? " done" : (task.state === "err" ? " err" : (task.state === "run" ? " run" : ""));
+      var sub;
+      if (task.state === "done") sub = t("done", { size: fmtSize(task.total) });
+      else if (task.state === "err") sub = t("failed", { err: task.err || t("unknownError") });
+      else if (task.state === "wait") sub = t("waiting", { size: fmtSize(task.total) });
+      else {
+        sub = fmtSize(task.loaded) + " / " + fmtSize(task.total);
+        if (task.speed > 0) sub += " · " + fmtSize(task.speed) + "/s";
+      }
+
+      html += '<div class="task' + cls + '">' +
+        '<div class="task-head"><span class="task-name">' + esc(task.file.name) + "</span>" +
+        '<span class="task-pct">' + (task.state === "run" ? pct + "%" : "") + "</span></div>" +
+        '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="task-sub">' + esc(sub) + "</div>" +
+        "</div>";
+    }
+    $sheetBody.innerHTML = html;
+    $sheet.classList.add("show");
+  }
+
+  api("/api/info").then(function (d) {
+    if (!d) return;
+    readOnly = !!d.readOnly;
+    if (typeof d.count === "number") shareCount = d.count;
+
+    // Adopt the host's configured language unless this browser already stored
+    // an explicit choice.
+    if (!storedLang && d.lang && normalizeLang(d.lang) !== lang) {
+      setLang(normalizeLang(d.lang), false);
+    } else {
+      updateRootChip();
+      // Re-render so the delete buttons disappear if the first paint beat the
+      // info request.
+      if (readOnly && (shareId || cwd)) load(shareId, cwd);
+    }
+  }).catch(function () { /* ignore */ });
+
+  $langBtn.addEventListener("click", function () {
+    setLang(lang === "en" ? "zh-CN" : "en", true);
+  });
+
+  applyStatic();
+  updateLangButton();
+  updateRootChip();
+
+  window.addEventListener("hashchange", onRoute);
+  onRoute();
+})();
+</script>
+</body>
+</html>
