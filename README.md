@@ -253,6 +253,10 @@ The generated Wails bindings under `frontend/bindings` are committed so a fresh
 clone builds without the CLI. After changing an exported Go method, run
 `wails3 generate bindings -ts` and commit the result.
 
+Release notes live in `.github/release-notes/<tag>.md` (for example
+`v0.1.0.md`). A version without a note there falls back to GitHub's
+auto-generated release notes.
+
 ## Roadmap
 
 - [ ] Post-transfer verification (size plus optional hash)

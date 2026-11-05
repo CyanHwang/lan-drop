@@ -249,6 +249,9 @@ go build -tags server .    # 验证服务端模式
 `frontend/bindings` 下的 Wails 生成绑定已提交，全新克隆无需安装 CLI 即可构建。
 修改 Go 导出接口后，记得运行 `wails3 generate bindings -ts` 并一起提交。
 
+发布说明放在 `.github/release-notes/<tag>.md`（例如 `v0.1.0.md`）。某个版本没有
+对应文件时，回退到 GitHub 自动生成的发布说明。
+
 ## 路线图
 
 - [ ] 传输完成后自动校验（大小 + 可选哈希）

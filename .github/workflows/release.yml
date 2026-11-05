@@ -83,7 +83,32 @@ jobs:
           esac
           ls -lh out/
 
-      - name: Upload to release
+      - name: Resolve release notes
+        id: notes
+        shell: bash
+        run: |
+          f=".github/release-notes/${{ github.ref_name }}.md"
+          if [ -f "$f" ]; then
+            echo "path=$f" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Prefer a hand-written note named after the tag. Versions without one
+      # fall back to GitHub's auto-generated notes. The tag guard keeps a
+      # manual workflow_dispatch run from publishing against a branch ref.
+      - name: Upload to release (with notes)
+        if: startsWith(github.ref, 'refs/tags/') && steps.notes.outputs.path != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          body_path: ${{ steps.notes.outputs.path }}
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to release (auto-generated notes)
+        if: startsWith(github.ref, 'refs/tags/') && steps.notes.outputs.path == ''
         uses: softprops/action-gh-release@v2
         with:
           files: out/*
