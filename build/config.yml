@@ -53,17 +53,5 @@ dev_mode:
       type: primary
       exit_policy: shutdown
 
-# File Associations
-# More information at: https://v3.wails.io/noit/done/yet
-fileAssociations:
-#  - ext: wails
-#    name: Wails
-#    description: Wails Application File
-#    iconName: wailsFileIcon
-#    role: Editor
-#  - ext: jpg
-#    name: JPEG
-#    description: Image File
-#    iconName: jpegFileIcon
-#    role: Editor
-#    mimeType: image/jpeg  # (optional)
+# No file associations: LanDrop does not open documents.
+fileAssociations: []
