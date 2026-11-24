@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, windows]
     steps:
       - uses: actions/checkout@v4
 

@@ -100,14 +100,11 @@ tasks:
         sh: 'wails3 tool docker-mounts'
 
   package:
-    summary: Packages the application for Linux
+    summary: Packages the application for Linux as a deb
     deps:
       - task: build
     cmds:
-      - task: create:appimage
       - task: create:deb
-      - task: create:rpm
-      - task: create:aur
 
   create:appimage:
     summary: Creates an AppImage

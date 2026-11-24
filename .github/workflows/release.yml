@@ -18,8 +18,6 @@ jobs:
         include:
           - os: windows-latest
             name: windows-amd64
-          - os: macos-latest
-            name: macos-universal
           - os: ubuntu-latest
             name: linux-amd64
 
@@ -55,31 +53,28 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build application
-        if: runner.os != 'macOS'
+      # Windows ships a bare executable; Linux is distributed as a deb so the
+      # desktop entry, icon and GTK/WebKit dependencies are installed with it.
+      - name: Build application (Windows)
+        if: runner.os == 'Windows'
         run: wails3 build
 
-      # macOS goes through the package task instead: it builds the .app
-      # bundle and wraps it in a styled .dmg (drag-to-Applications).
-      - name: Build and package disk image (macOS)
-        if: runner.os == 'macOS'
-        run: wails3 task darwin:package:dmg
+      - name: Build deb package (Linux)
+        if: runner.os == 'Linux'
+        run: wails3 task linux:create:deb
 
       - name: List artifacts
         shell: bash
         run: ls -la bin/
 
-      # Windows and Linux ship one executable, so the download is the program
-      # itself — no unzip step. macOS gets a disk image: open it, drag the app
-      # to Applications, done.
+      # Windows ships a bare executable; Linux ships the deb produced above.
       - name: Prepare release files
         shell: bash
         run: |
           mkdir -p out
           case "${{ runner.os }}" in
             Windows) cp "bin/LanDrop.exe" "out/LanDrop-${{ matrix.name }}.exe" ;;
-            macOS)   cp bin/*.dmg "out/LanDrop-${{ matrix.name }}.dmg" ;;
-            *)       cp bin/lan-drop "out/LanDrop-${{ matrix.name }}" ;;
+            *)       cp bin/*.deb "out/LanDrop-${{ matrix.name }}.deb" ;;
           esac
           ls -lh out/
 

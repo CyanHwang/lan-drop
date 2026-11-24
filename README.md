@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](go.mod)
 [![Wails](https://img.shields.io/badge/Wails-v3-DF0000)](https://v3.wails.io)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#quick-start)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#quick-start)
 
 Point LanDrop at a folder and start the service. The other end opens a browser and gets the whole tree: browse, upload, download, and pick up an interrupted transfer where it stopped.
 
@@ -55,12 +55,10 @@ few tens of megabytes. An Electron app of comparable scope typically ships
 
 Grab the file for your platform from [Releases](https://github.com/CyanHwang/lan-drop/releases):
 
-- **Windows / Linux** — one executable, e.g. `LanDrop-windows-amd64.exe`. Download it and run; there is nothing to unzip. Quote the name on Linux (`chmod +x "LanDrop-linux-amd64"`)
-- **macOS** — a `.dmg` disk image. Open it, drag LanDrop to Applications, done.
-  The build is unsigned, so the first launch needs a right-click → **Open**, or
-  `xattr -dr com.apple.quarantine /Applications/lan-drop.app`
+- **Windows** — a single executable, e.g. `LanDrop-windows-amd64.exe`. Download and run; nothing to unzip.
+- **Linux** — a `.deb` package, e.g. `LanDrop-linux-amd64.deb`. Install it with `sudo apt install ./LanDrop-linux-amd64.deb`; the desktop entry, icon and GTK/WebKit dependencies come with it.
 
-No installer, and no runtime to set up first.
+No runtime to set up first.
 
 On first launch the OS may ask for firewall or network permission. **You must allow it**, otherwise no other device can connect.
 

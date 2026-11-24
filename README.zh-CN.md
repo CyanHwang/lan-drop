@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](go.mod)
 [![Wails](https://img.shields.io/badge/Wails-v3-DF0000)](https://v3.wails.io)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#快速开始)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#快速开始)
 
 指定一个文件夹，启动服务。对端打开浏览器就能看到完整的目录树：浏览、上传、下载，中断的传输可以接着传。
 
@@ -53,12 +53,10 @@ WebView2，macOS 上是 WKWebView，Linux 上是 WebKitGTK。没有 Chromium，�
 
 到 [Releases](https://github.com/CyanHwang/lan-drop/releases) 下载对应平台的文件：
 
-- **Windows / Linux** —— 单个可执行文件（如 `LanDrop-windows-amd64.exe`），下载后直接运行，不用解压。Linux 下文件名含空格，命令里记得加引号
-- **macOS** —— `.dmg` 磁盘映像，打开后把 LanDrop 拖进「应用程序」即可。
-  构建未做代码签名，首次启动需要右键 →「打开」，或执行
-  `xattr -dr com.apple.quarantine /Applications/lan-drop.app`
+- **Windows** —— 单个可执行文件（如 `LanDrop-windows-amd64.exe`），下载后直接运行，不用解压。
+- **Linux** —— `.deb` 安装包（如 `LanDrop-linux-amd64.deb`），用 `sudo apt install ./LanDrop-linux-amd64.deb` 安装；桌面图标、菜单项和 GTK/WebKit 依赖会一并装上。
 
-不需要安装器，也不用预先装任何运行时。
+不用预先安装任何运行时。
 
 首次启动时系统可能弹出防火墙提示，**必须允许**，否则其它设备连不上。
 
