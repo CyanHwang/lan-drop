@@ -15,7 +15,7 @@
   <img src="docs/mobile.zh-CN.png" width="300" alt="LanDrop 手机端 · 浅色">
   <img src="docs/mobile.zh-CN-dark.png" width="300" alt="LanDrop 手机端 · 深色">
 </p>
-<p align="center"><sub>浏览器端界面（截图为 v0.1.0 布局）。v0.2.0 增加了逐行复选框用于批量下载、返回按钮和选择栏。主题跟随系统。</sub></p>
+<p align="center"><sub>浏览器端的多选界面。复选框勾选文件和文件夹用于批量下载，点文件夹名称进入目录。主题跟随系统，语言可在顶栏切换。</sub></p>
 
 **本项目全部由 AI 编写。** 仓库中的 Go、TypeScript、CSS、构建配置和文档，每一行都由 AI 生成。
 

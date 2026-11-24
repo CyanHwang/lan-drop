@@ -15,7 +15,7 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
   <img src="docs/mobile.png" width="300" alt="LanDrop on a phone, light theme">
   <img src="docs/mobile-dark.png" width="300" alt="LanDrop on a phone, dark theme">
 </p>
-<p align="center"><sub>The browser UI (screenshots show the v0.1.0 layout). v0.2.0 adds per-row checkboxes for batch download, a back button and a selection bar. Theme follows the system.</sub></p>
+<p align="center"><sub>The browser UI with multi-select. Checkboxes pick files and folders for batch download; tapping a folder name opens it. Theme follows the system; language switches from the top bar.</sub></p>
 
 **Written entirely by AI.** Every line of Go, TypeScript, CSS, build configuration and documentation in this repository was produced by an AI coding agent.
 

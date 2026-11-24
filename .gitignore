@@ -75,3 +75,4 @@ desktop.ini
 .task/
 .wails/
 /build/.task/
+.playwright-cli/
