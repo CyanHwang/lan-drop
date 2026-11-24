@@ -13,8 +13,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,6 +42,10 @@ type edit struct {
 	// limit caps how many leading version lines belong to this file. Needed
 	// for package-lock.json, whose dependency entries also carry "version".
 	limit int
+	// optional marks files that may be absent, such as platform directories
+	// excluded by .gitignore. A missing optional file is skipped; a missing
+	// required one is an error.
+	optional bool
 }
 
 func main() {
@@ -71,8 +77,8 @@ func main() {
 		{file: "build/config.yml", want: 1},
 		{file: "build/darwin/Info.plist", kind: "plist", want: 2},
 		{file: "build/darwin/Info.dev.plist", kind: "plist", want: 2},
-		{file: "build/ios/Info.plist", kind: "plist", want: 2},
-		{file: "build/ios/Info.dev.plist", kind: "plistdev", want: 2},
+		{file: "build/ios/Info.plist", kind: "plist", want: 2, optional: true},
+		{file: "build/ios/Info.dev.plist", kind: "plistdev", want: 2, optional: true},
 		{file: "build/windows/info.json", want: 4},
 		{file: "build/windows/wails.exe.manifest", kind: "manifest", want: 1},
 		{file: "build/windows/nsis/wails_tools.nsh", kind: "define", want: 1},
@@ -89,6 +95,9 @@ func main() {
 		path := filepath.Join(root, filepath.FromSlash(e.file))
 		before, err := os.ReadFile(path)
 		if err != nil {
+			if e.optional && errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
 			fail(err)
 		}
 		expected := want
