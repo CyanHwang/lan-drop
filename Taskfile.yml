@@ -6,9 +6,9 @@ vars:
   APP_NAME: "lan-drop"
   # Product name for contexts that allow capitals but not spaces: the server
   # binary, installer / MSIX artifact names, container paths.
-  APP_PRODUCT: "Lan-Drop"
+  APP_PRODUCT: "LanDrop"
   # User-facing name, also the desktop executable and app bundle name.
-  APP_DISPLAY: "Lan Drop"
+  APP_DISPLAY: "LanDrop"
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'

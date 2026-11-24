@@ -11,7 +11,7 @@
 		<key>CFBundleIdentifier</key>
 		<string>io.landrop.app</string>
 		<key>CFBundleName</key>
-		<string>Lan Drop</string>
+		<string>LanDrop</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -23,6 +23,6 @@
 		<key>NSHighResolutionCapable</key>
 		<string>true</string>
 		<key>NSHumanReadableCopyright</key>
-		<string>(c) 2026, Lan Drop</string>
+		<string>(c) 2026, LanDrop</string>
 	</dict>
 </plist>

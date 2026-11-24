@@ -1,4 +1,4 @@
-# Lan Drop · 局域网快传
+# LanDrop · 局域网快传
 
 > 把一个文件夹分享给局域网里的每台设备。不装客户端，不注册，不经过云端。
 
@@ -12,8 +12,8 @@
 指定一个文件夹，启动服务。对端打开浏览器就能看到完整的目录树：浏览、上传、下载，中断的传输可以接着传。
 
 <p align="center">
-  <img src="docs/mobile.zh-CN.png" width="300" alt="Lan Drop 手机端 · 浅色">
-  <img src="docs/mobile.zh-CN-dark.png" width="300" alt="Lan Drop 手机端 · 深色">
+  <img src="docs/mobile.zh-CN.png" width="300" alt="LanDrop 手机端 · 浅色">
+  <img src="docs/mobile.zh-CN-dark.png" width="300" alt="LanDrop 手机端 · 深色">
 </p>
 <p align="center"><sub>浏览器端界面。主题跟随系统，语言可在顶栏切换。</sub></p>
 
@@ -38,7 +38,7 @@
 
 ## 为什么这么小
 
-Lan Drop 是一个 [Wails](https://v3.wails.io) v3 应用：Go 写后端，React 写界面，编译成单个二进制。
+LanDrop 是一个 [Wails](https://v3.wails.io) v3 应用：Go 写后端，React 写界面，编译成单个二进制。
 
 关键在于它**不含**什么。Wails 不打包浏览器内核，而是驱动系统已有的那个：Windows 上是
 WebView2，macOS 上是 WKWebView，Linux 上是 WebKitGTK。没有 Chromium，没有 Node
@@ -53,8 +53,8 @@ WebView2，macOS 上是 WKWebView，Linux 上是 WebKitGTK。没有 Chromium，�
 
 到 [Releases](https://github.com/CyanHwang/lan-drop/releases) 下载对应平台的文件：
 
-- **Windows / Linux** —— 单个可执行文件（如 `Lan Drop-windows-amd64.exe`），下载后直接运行，不用解压。Linux 下文件名含空格，命令里记得加引号
-- **macOS** —— `.dmg` 磁盘映像，打开后把 Lan Drop 拖进「应用程序」即可。
+- **Windows / Linux** —— 单个可执行文件（如 `LanDrop-windows-amd64.exe`），下载后直接运行，不用解压。Linux 下文件名含空格，命令里记得加引号
+- **macOS** —— `.dmg` 磁盘映像，打开后把 LanDrop 拖进「应用程序」即可。
   构建未做代码签名，首次启动需要右键 →「打开」，或执行
   `xattr -dr com.apple.quarantine /Applications/lan-drop.app`
 
@@ -92,12 +92,12 @@ wails3 build
 不带桌面界面，只跑 HTTP 服务，适合 NAS、树莓派、容器：
 
 ```bash
-go build -tags server -o Lan-Drop-server .
-./Lan-Drop-server -share /data/photos -share /data/docs
+go build -tags server -o LanDrop-server .
+./LanDrop-server -share /data/photos -share /data/docs
 ```
 
 ```
-Lan Drop 服务已启动（读写模式）
+LanDrop 服务已启动（读写模式）
 
 共享目录 2 个：
   photos             /data/photos
@@ -132,7 +132,7 @@ docker run --rm -p 57577:57577 -v /host/photos:/data/photos lan-drop -share /dat
 配置存在**可执行文件同级**的 `lan-drop.ini` 里，纯绿色便携。桌面端添加文件夹时会自动写入，也可以直接用记事本改：
 
 ```ini
-; Lan Drop 局域网快传配置文件
+; LanDrop 局域网快传配置文件
 
 [general]
 language = en            ; en | zh-CN

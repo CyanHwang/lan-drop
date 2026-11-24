@@ -2,7 +2,7 @@
   "name": "lan-drop",
   "private": true,
   "version": "0.1.0",
-  "description": "Lan Drop desktop UI",
+  "description": "LanDrop desktop UI",
   "license": "MIT",
   "type": "module",
   "scripts": {

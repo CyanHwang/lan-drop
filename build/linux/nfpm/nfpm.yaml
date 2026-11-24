@@ -11,7 +11,7 @@ section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "Share folders over your local network"
-vendor: "Lan Drop"
+vendor: "LanDrop"
 homepage: "https://github.com/CyanHwang/lan-drop"
 license: "MIT"
 release: "1"

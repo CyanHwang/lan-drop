@@ -5,22 +5,22 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "Lan-Drop"
+    !define INFO_PROJECTNAME "LanDrop"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "Lan Drop"
+    !define INFO_COMPANYNAME "LanDrop"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "Lan Drop"
+    !define INFO_PRODUCTNAME "LanDrop"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "0.1.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "(c) 2026, Lan Drop"
+    !define INFO_COPYRIGHT "(c) 2026, LanDrop"
 !endif
 !ifndef PRODUCT_EXECUTABLE
-    !define PRODUCT_EXECUTABLE "Lan Drop.exe"
+    !define PRODUCT_EXECUTABLE "LanDrop.exe"
 !endif
 !ifndef UNINST_KEY_NAME
     !define UNINST_KEY_NAME "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
