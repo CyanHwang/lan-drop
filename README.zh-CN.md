@@ -247,6 +247,20 @@ go build -tags server .    # 验证服务端模式
 `frontend/bindings` 下的 Wails 生成绑定已提交，全新克隆无需安装 CLI 即可构建。
 修改 Go 导出接口后，记得运行 `wails3 generate bindings -ts` 并一起提交。
 
+### 版本管理
+
+`build/config.yml` 里的 `info.version` 是唯一版本来源。其他所有版本号（plist、
+Windows 元数据、MSIX 清单、deb 配置、npm 包）都由它派生：
+
+```bash
+wails3 task version:sync VERSION=1.2.3  # 全仓库统一改版本
+wails3 task version:check               # 校验所有文件是否一致
+```
+
+不要手改那些生成文件——`version:sync` 会覆盖它们。CI 每次推送都会跑
+`version:check`。推送 `v*` 标签时，CI 会先从标签同步版本号再构建，确保产物版本
+与发布标签一致。
+
 发布说明放在 `.github/release-notes/<tag>.md`（例如 `v0.1.0.md`）。某个版本没有
 对应文件时，回退到 GitHub 自动生成的发布说明。
 

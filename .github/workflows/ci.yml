@@ -45,6 +45,11 @@ jobs:
           npm ci
           npm run build
 
+      # Every platform metadata file must carry the version declared in
+      # build/config.yml. Catches a missed sync before it reaches a release.
+      - name: Version consistency
+        run: go run ./scripts/syncversion
+
       - name: go vet (desktop)
         run: go vet ./...
 

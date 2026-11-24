@@ -251,6 +251,21 @@ The generated Wails bindings under `frontend/bindings` are committed so a fresh
 clone builds without the CLI. After changing an exported Go method, run
 `wails3 generate bindings -ts` and commit the result.
 
+### Versioning
+
+`build/config.yml` → `info.version` is the single source of truth. Every other
+version string (plist, Windows metadata, MSIX manifests, deb config, npm
+packages) is derived from it:
+
+```bash
+wails3 task version:sync VERSION=1.2.3  # set the version repo-wide
+wails3 task version:check               # verify all files agree
+```
+
+Never edit the generated files by hand — `version:sync` overwrites them. CI
+runs `version:check` on every push. Pushing a `v*` tag syncs all versions from
+that tag before building, so artifacts always match the release they ship under.
+
 Release notes live in `.github/release-notes/<tag>.md` (for example
 `v0.1.0.md`). A version without a note there falls back to GitHub's
 auto-generated release notes.

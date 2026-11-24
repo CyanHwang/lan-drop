@@ -53,6 +53,20 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # The tag is the authority for the release version. Sync every version
+      # field from it before building, so artifacts and package metadata can
+      # never disagree with the tag they were published under.
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          go run ./scripts/syncversion -set "$VERSION" -write
+
+      - name: Verify version consistency
+        shell: bash
+        run: go run ./scripts/syncversion
+
       # Windows ships a bare executable; Linux is distributed as a deb so the
       # desktop entry, icon and GTK/WebKit dependencies are installed with it.
       - name: Build application (Windows)

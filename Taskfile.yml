@@ -24,6 +24,21 @@ includes:
   linux: ./build/linux/Taskfile.yml
 
 tasks:
+  version:sync:
+    summary: Sync the version everywhere from build/config.yml
+    desc: |
+      Set VERSION=x.y.z to change the version repo-wide, or run without it to
+      repair drift from build/config.yml. Examples:
+        wails3 task version:sync VERSION=1.2.3
+        wails3 task version:sync
+    cmds:
+      - go run ./scripts/syncversion -set "{{.VERSION | default .CLI_ARGS}}" -write
+
+  version:check:
+    summary: Verify every file agrees on the version in build/config.yml
+    cmds:
+      - go run ./scripts/syncversion
+
   build:
     summary: Builds the application
     cmds:
