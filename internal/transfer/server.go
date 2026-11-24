@@ -274,6 +274,10 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/list", s.handleList)
 	mux.HandleFunc("GET /api/download", s.handleDownload)
+	// The browser posts a form so a large selection does not have to fit in a
+	// URL; GET stays for curl and simple scripts.
+	mux.HandleFunc("GET /api/download/zip", s.handleZipDownload)
+	mux.HandleFunc("POST /api/download/zip", s.handleZipDownload)
 	mux.HandleFunc("GET /api/probe", s.handleProbe)
 	mux.HandleFunc("PUT /api/upload", s.handleUpload)
 	mux.HandleFunc("POST /api/mkdir", s.handleMkdir)

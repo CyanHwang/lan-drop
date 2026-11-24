@@ -49,6 +49,8 @@ const (
 	ErrServiceNotRunning Msg = "err.serviceNotRunning"
 	ErrInvalidPath       Msg = "err.invalidPath"
 	ErrConfigWrite       Msg = "err.configWrite"
+	ErrNothingSelected   Msg = "err.nothingSelected"
+	ErrTooManyItems      Msg = "err.tooManyItems"
 )
 
 // Desktop shell strings.
@@ -112,6 +114,8 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrServiceNotRunning: "service is not running",
 		ErrInvalidPath:       "invalid path: %v",
 		ErrConfigWrite:       "cannot save configuration: %v",
+		ErrNothingSelected:   "nothing selected",
+		ErrTooManyItems:      "too many items selected (limit %d)",
 
 		AppDescription:   "LAN file transfer",
 		AppRepo:          "Open the GitHub repository",
@@ -167,6 +171,8 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrServiceNotRunning: "服务未启动",
 		ErrInvalidPath:       "路径无效: %v",
 		ErrConfigWrite:       "无法保存配置: %v",
+		ErrNothingSelected:   "没有选择任何项目",
+		ErrTooManyItems:      "选择项过多（上限 %d）",
 
 		AppDescription:   "局域网快传",
 		AppRepo:          "打开 GitHub 仓库",

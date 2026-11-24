@@ -86,13 +86,17 @@ body::before {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes check-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 @keyframes sheet-up {
-  from { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
-  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 @keyframes shimmer {
   0% { transform: translateX(-120%); }
@@ -214,16 +218,48 @@ body::before {
   transition: color .2s, border-color .2s;
 }
 .lang-btn:hover { color: var(--text-2); border-color: var(--accent); }
-.lang-btn:active { transform: scale(.96); }
 
 /* ---------- breadcrumbs ---------- */
 
-.crumbs {
+/* The back button stays put while the path beside it scrolls. */
+.crumb-row {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  gap: 6px;
+  padding: 4px 14px 10px;
+}
+.back-btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .18s, border-color .18s, background-color .18s;
+}
+.back-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.back-btn:disabled { opacity: .35; cursor: default; }
+.back-btn svg { width: 17px; height: 17px; display: block; }
+
+.crumbs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
   gap: 2px;
-  padding: 4px 14px 8px;
   overflow-x: auto;
   scrollbar-width: none;
   font-size: 13px;
@@ -254,48 +290,65 @@ main {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0 12px 16px;
+  padding: 2px 12px 18px;
 }
 
 ul.files { list-style: none; margin: 0; padding: 0; }
 
+/* Flat rows separated by a hairline, not a stack of cards. The selected row
+   gets its tint and rail, but the rule between rows never disappears — losing
+   it made consecutive selected items read as one oversized block. */
 ul.files li {
   position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 11px 12px;
-  border-radius: var(--radius);
-  cursor: pointer;
+  border-radius: 10px;
   touch-action: manipulation;
-  animation: item-in .34s cubic-bezier(.22,.8,.3,1) both;
-  transition: background-color .16s, transform .1s;
+  -webkit-user-select: none;
+  user-select: none;
+  animation: item-in .38s cubic-bezier(.22,.8,.3,1) backwards;
+  transition: background-color .2s ease;
 }
-ul.files li:active {
-  background: var(--surface-2);
-  transform: scale(.985);
-}
+/* File/folder rows carry no padding of their own. Padding on the row left a
+   strip outside the selection zone; tapping there fell through to the folder
+   navigation handler. Each child now owns its share of the inset instead. */
+ul.files li[data-rel] { padding: 0; }
+ul.files li[data-rel] > .pick-zone { padding: 11px 0 11px 6px; }
+ul.files li[data-rel] > .meta { padding: 11px 0; }
+ul.files li[data-rel] > .row-actions { padding: 11px 12px 11px 0; }
 ul.files li + li::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 62px;
+  left: 100px;
   right: 12px;
   height: 1px;
-  background: var(--line);
+  background: linear-gradient(90deg, var(--line), transparent 88%);
   pointer-events: none;
 }
+/* Share-picker rows have no selection zone, so their text starts 38px earlier. */
+ul.files li[data-share] + li[data-share]::before { left: 62px; }
+/* ::before is the separator, so the accent rail uses ::after. */
+ul.files li.sel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+ul.files li.sel { background: var(--accent-soft); }
 
 /* Skeleton rows. Same geometry as a real row (38px icon, two text lines) so
    nothing shifts when the content lands. The sweep is one shared keyframe. */
 ul.files.skeleton li {
   animation: none;
-  pointer-events: none;
-  cursor: default;
-}
-ul.files.skeleton li:active {
   background: none;
-  transform: none;
+  pointer-events: none;
 }
 .sk-ico,
 .sk-line {
@@ -338,6 +391,76 @@ ul.files.skeleton li:active {
   .sk-line::after { animation: none; }
 }
 
+/* Checkbox, the gap beside it and the icon are one continuous hot zone. A
+   finger landing in the space between still selects, which is where most
+   near-misses used to go. The button keeps keyboard semantics. */
+.pick-zone {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.pick {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 32px;
+  border: 0;
+  background: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: inherit;
+}
+button.pick i {
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
+  border: 1.5px solid var(--line-2);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.pick-zone:hover button.pick i { border-color: var(--accent); }
+button.pick.on i {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 2px 7px rgba(59,108,246,.26);
+}
+button.pick i svg {
+  width: 14px;
+  height: 14px;
+  color: #fff;
+  opacity: 0;
+}
+button.pick i svg path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+button.pick.on i svg { opacity: 1; }
+button.pick.on i svg path { animation: check-draw .26s cubic-bezier(.3,.9,.3,1) .04s forwards; }
+
+.pick-zone:hover .ico {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* A selected row carries three cues: tinted surface, accent rail on the left,
+   and a solid accent icon. Nothing moves, but the layer gap is unmistakable. */
+ul.files li.sel .pick-zone .ico,
+ul.files li.sel .pick-zone:hover .ico {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(59,108,246,.24);
+}
+ul.files li.sel .name { font-weight: 500; }
+
+/* Folder rows also navigate from the name area; files do nothing there. */
+ul.files li[data-dir="1"] .meta { cursor: pointer; }
+ul.files li[data-dir="1"]:hover .name { color: var(--accent); }
+
 .ico {
   width: 38px; height: 38px;
   border-radius: 11px;
@@ -346,7 +469,7 @@ ul.files.skeleton li:active {
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--muted);
   flex-shrink: 0;
-  transition: background-color .2s, box-shadow .2s;
+  transition: background-color .2s, box-shadow .2s, color .2s;
 }
 .ico.dir {
   color: var(--accent);
@@ -383,9 +506,8 @@ ul.files.skeleton li:active {
   padding: 9px;
   cursor: pointer;
   border-radius: 10px;
-  transition: background .16s, color .16s, transform .1s;
+  transition: background .16s, color .16s;
 }
-.act-btn:active { transform: scale(.88); }
 .act-btn.dl:active { background: var(--accent-soft); color: var(--accent); }
 .act-btn.del:active { background: var(--err-soft); color: var(--err); }
 .act-btn svg { width: 16px; height: 16px; display: block; }
@@ -415,6 +537,7 @@ ul.files.skeleton li:active {
 /* ---------- dock ---------- */
 
 .dock {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   gap: 9px;
@@ -426,6 +549,77 @@ ul.files.skeleton li:active {
   -webkit-backdrop-filter: blur(16px);
   transition: border-color .26s, background-color .26s;
 }
+
+/* Selection bar. Anchored to the top edge of the dock rather than to a
+   viewport offset, so it stays glued to the buttons however tall they get. */
+.selbar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  width: calc(100% - 20px);
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 7px 7px 10px;
+  border-radius: 15px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-pop);
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity .18s, transform .18s;
+  z-index: 15;
+}
+.selbar.on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.selbar .all {
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.selbar .all:active { background: var(--accent-soft); }
+.selbar .count {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.selbar .spacer { flex: 1; min-width: 4px; }
+.selbar button.action {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  font-size: 13.5px;
+  border-radius: 10px;
+  gap: 6px;
+}
+.selbar button.action.primary { flex: 0 0 auto; box-shadow: none; }
+.selbar button.action.ghost {
+  flex: 0 0 auto;
+  padding: 9px 10px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.selbar button.action svg { width: 15px; height: 15px; }
 
 button.action {
   border: 0;
@@ -440,15 +634,13 @@ button.action {
   justify-content: center;
   gap: 8px;
   touch-action: manipulation;
-  transition: transform .12s, opacity .16s, background-color .16s;
+  transition: opacity .16s, background-color .16s;
 }
-button.action:active { transform: scale(.97); }
 button.action:disabled {
   opacity: .38;
   cursor: not-allowed;
   box-shadow: none;
 }
-button.action:disabled:active { transform: none; }
 
 button.action.primary {
   flex: 1;
@@ -618,9 +810,11 @@ button.action svg { width: 18px; height: 18px; }
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 10px;
-    row-gap: 2px;
+    row-gap: 0;
   }
-  ul.files li + li::before { display: none; }
+  /* li + li keys off DOM order, but in a grid the first visual row has N
+     cells. Hide the rule on all of them so every row starts clean. */
+  ul.files li:nth-child(-n+2)::before { display: none; }
 
   .dock { justify-content: center; }
   .dock .action.primary { flex: 0 1 420px; }
@@ -629,16 +823,19 @@ button.action svg { width: 18px; height: 18px; }
 @media (min-width: 1180px) {
   .app { max-width: 1220px; }
   ul.files { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  ul.files li:nth-child(-n+3)::before { display: none; }
 }
 
 @media (min-width: 1560px) {
   .app { max-width: 1560px; }
   ul.files { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  ul.files li:nth-child(-n+4)::before { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
@@ -653,7 +850,15 @@ button.action svg { width: 18px; height: 18px; }
     <button class="lang-btn" id="langBtn" type="button" aria-label="Language">EN</button>
     <div class="root-chip"><span class="dot"></span><b id="rootName">Connecting…</b></div>
   </header>
-  <nav class="crumbs" id="crumbs"></nav>
+  <div class="crumb-row">
+    <button class="back-btn" id="backBtn" type="button" data-i18n-aria="goBack" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 5l-7 7 7 7"/>
+      </svg>
+      <span data-i18n="backLabel">Back</span>
+    </button>
+    <nav class="crumbs" id="crumbs"></nav>
+  </div>
   <main id="main">
     <!-- Skeleton, not a spinner: it occupies the same space the list will,
          so the first paint never jumps. Rendered again from JS on navigation. -->
@@ -674,6 +879,22 @@ button.action svg { width: 18px; height: 18px; }
     <div class="sheet-body" id="sheetBody"></div>
   </div>
   <footer class="dock">
+    <div class="selbar" id="selBar" role="region" aria-label="Selection">
+      <button class="all" id="selAll" type="button">Select all</button>
+      <span class="count" id="selCount"></span>
+      <span class="spacer"></span>
+      <button class="action primary" id="selDownload" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/>
+        </svg>
+        <span data-i18n="downloadZip">Download zip</span>
+      </button>
+      <button class="action ghost" id="selClear" type="button" data-i18n-aria="clearSelection" aria-label="Clear selection">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
     <button class="action ghost" id="mkdirBtn" data-i18n-aria="newFolder" aria-label="New folder" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
         <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -690,6 +911,9 @@ button.action svg { width: 18px; height: 18px; }
   </footer>
 </div>
 <div class="toast" id="toast"></div>
+<!-- Reused for every batch download: a folder with thousands of entries would
+     otherwise produce a URL long enough for some browsers to truncate. -->
+<form id="zipForm" method="post" action="/api/download/zip" hidden></form>
 
 <script>
 (function () {
@@ -736,7 +960,18 @@ button.action svg { width: 18px; height: 18px; }
       readOnly: "read-only",
       openFailed: "Cannot open: {err}",
       monthDay: "{m}/{d}",
-      switchTo: "中"
+      switchTo: "中",
+      selectAll: "Select all",
+      clearAll: "Clear",
+      clearSelection: "Clear selection",
+      selectedCount: "{n} selected",
+      selectItem: "Select {name}",
+      goBack: "Go back",
+      backLabel: "Back",
+      downloadZip: "Download zip",
+      zipStarted: "Packaging {n} item(s)…",
+      selectNothing: "Nothing selected",
+      tooManyPicked: "At most {n} items per download"
     },
     "zh-CN": {
       connecting: "连接中",
@@ -776,7 +1011,18 @@ button.action svg { width: 18px; height: 18px; }
       readOnly: "只读",
       openFailed: "打不开：{err}",
       monthDay: "{m}月{d}日",
-      switchTo: "EN"
+      switchTo: "EN",
+      selectAll: "全选",
+      clearAll: "取消全选",
+      clearSelection: "取消选择",
+      selectedCount: "已选 {n} 项",
+      selectItem: "选择 {name}",
+      goBack: "返回上一层",
+      backLabel: "返回",
+      downloadZip: "打包下载",
+      zipStarted: "正在打包 {n} 项…",
+      selectNothing: "还没有选择任何项目",
+      tooManyPicked: "一次最多打包 {n} 项"
     }
   };
 
@@ -860,6 +1106,15 @@ button.action svg { width: 18px; height: 18px; }
   var tasks = [];
   var taskSeq = 0;
   var uploading = false;
+  // Selected entries, keyed by share-relative path, plus the paths currently
+  // rendered. Both are reset whenever the folder changes, because a path only
+  // means something relative to the listing it came from.
+  var picked = {};
+  var entries = [];
+  // Mirrors maxZipPaths in zip.go. The batch is posted as a form, and a form
+  // response replaces the page — so an over-large selection has to be refused
+  // here, before it ever leaves the browser.
+  var MAX_PICK = 20000;
   // A lone share is entered directly only on a cold visit, i.e. when the URL
   // carries no hash yet. Once the URL points at the virtual root (#/), the
   // user asked for the list and it has to stay put — including across a
@@ -877,6 +1132,11 @@ button.action svg { width: 18px; height: 18px; }
   var $rootName = document.getElementById("rootName");
   var $langBtn = document.getElementById("langBtn");
   var $loadBar = document.getElementById("loadBar");
+  var $backBtn = document.getElementById("backBtn");
+  var $selBar = document.getElementById("selBar");
+  var $selCount = document.getElementById("selCount");
+  var $selAll = document.getElementById("selAll");
+  var $zipForm = document.getElementById("zipForm");
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -923,6 +1183,7 @@ button.action svg { width: 18px; height: 18px; }
   var ICO_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
   var ICO_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
   var ICO_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+  var ICO_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
   var ICO_EMPTY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
 
   var EXT_MAP = {
@@ -947,6 +1208,98 @@ button.action svg { width: 18px; height: 18px; }
 
   function join(dir, name) {
     return dir ? dir + "/" + name : name;
+  }
+
+  /* ---------------- selection ---------------- */
+
+  function pickedList() {
+    var out = [];
+    for (var k in picked) {
+      if (Object.prototype.hasOwnProperty.call(picked, k)) out.push(k);
+    }
+    return out;
+  }
+
+  function clearPicked() {
+    picked = {};
+    updateSelBar();
+  }
+
+  function applyPick(li, on) {
+    if (!li) return;
+    li.classList.toggle("sel", on);
+    var box = li.querySelector("button.pick");
+    if (!box) return;
+    box.classList.toggle("on", on);
+    box.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
+  function togglePick(li, rel) {
+    if (picked[rel]) delete picked[rel];
+    else picked[rel] = true;
+    applyPick(li, !!picked[rel]);
+    updateSelBar();
+  }
+
+  // One pass over the rendered rows. Calling applyPick per entry instead would
+  // be quadratic, which a folder of a few thousand files would notice.
+  function syncPicks() {
+    var lis = $main.querySelectorAll("li[data-rel]");
+    for (var i = 0; i < lis.length; i++) {
+      applyPick(lis[i], !!picked[lis[i].getAttribute("data-rel")]);
+    }
+  }
+
+  function updateSelBar() {
+    var n = pickedList().length;
+    if (!n) {
+      $selBar.classList.remove("on");
+      return;
+    }
+    $selBar.classList.add("on");
+    $selCount.textContent = t("selectedCount", { n: n });
+    // Offer "clear all" only once everything visible is actually selected.
+    $selAll.textContent = (entries.length > 0 && n >= entries.length) ? t("clearAll") : t("selectAll");
+  }
+
+  function toggleSelectAll() {
+    var all = entries.length > 0 && pickedList().length >= entries.length;
+    picked = {};
+    if (!all) {
+      for (var i = 0; i < entries.length; i++) picked[entries[i]] = true;
+    }
+    syncPicks();
+    updateSelBar();
+  }
+
+  function appendHidden(form, name, value) {
+    var el = document.createElement("input");
+    el.type = "hidden";
+    el.name = name;
+    el.value = value;
+    form.appendChild(el);
+  }
+
+  // Posted as a form rather than followed as a link: a batch can carry
+  // thousands of paths, and that does not belong in a URL. The response sets
+  // Content-Disposition, so the browser downloads it and stays on this page.
+  function downloadZip() {
+    var paths = pickedList();
+    if (!paths.length) {
+      toast(t("selectNothing"));
+      return;
+    }
+    if (paths.length > MAX_PICK) {
+      toast(t("tooManyPicked", { n: MAX_PICK }));
+      return;
+    }
+    var form = $zipForm;
+    form.innerHTML = "";
+    appendHidden(form, "share", shareId);
+    appendHidden(form, "dir", cwd);
+    for (var i = 0; i < paths.length; i++) appendHidden(form, "paths", paths[i]);
+    form.submit();
+    toast(t("zipStarted", { n: paths.length }));
   }
 
   // Upload and mkdir need a target share; they are meaningless at the virtual root.
@@ -993,6 +1346,17 @@ button.action svg { width: 18px; height: 18px; }
       load(share, dir);
     } else {
       location.hash = h;
+    }
+  }
+
+  // Up one folder, or back to the share picker when already at a share root.
+  function goBack() {
+    if (cwd) {
+      var parts = cwd.split("/");
+      parts.pop();
+      nav(shareId, parts.join("/"));
+    } else if (shareId) {
+      nav("", "");
     }
   }
 
@@ -1047,8 +1411,13 @@ button.action svg { width: 18px; height: 18px; }
   // silent skips the skeleton, used when the current view is about to be
   // replaced immediately anyway (the cold-start jump into a lone share).
   function load(share, dir, silent) {
-    shareId = share || "";
-    cwd = dir || "";
+    var nextShare = share || "";
+    var nextDir = dir || "";
+    // Changing folder invalidates every selected path. A silent repaint of the
+    // same folder — which is what a language switch does — must keep them.
+    if (nextShare !== shareId || nextDir !== cwd) clearPicked();
+    shareId = nextShare;
+    cwd = nextDir;
     if (silent) {
       cancelSkeleton();
       hideLoadingBar();
@@ -1087,6 +1456,9 @@ button.action svg { width: 18px; height: 18px; }
       .catch(function (e) {
         cancelSkeleton();
         hideLoadingBar();
+        // The list is gone, so any selection in it is meaningless.
+        entries = [];
+        clearPicked();
         $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("openFailed", { err: esc(e.message) }) + "</div>";
       });
   }
@@ -1107,10 +1479,14 @@ button.action svg { width: 18px; height: 18px; }
       }
     }
     $crumbs.innerHTML = html;
+    // There is nowhere above the virtual share picker.
+    $backBtn.disabled = !shareId && !cwd;
   }
 
   function renderRoots(data) {
     setDockEnabled(false);
+    entries = [];
+    updateSelBar();
     if (!data.roots || !data.roots.length) {
       $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("noShares") + "</div>";
       return;
@@ -1133,14 +1509,18 @@ button.action svg { width: 18px; height: 18px; }
 
   function renderFiles(data) {
     setDockEnabled(true);
+    entries = [];
     if (!data.entries.length) {
       $main.innerHTML = '<div class="empty">' + ICO_EMPTY + t("emptyFolder") + "</div>";
+      updateSelBar();
       return;
     }
     var html = '<ul class="files">';
     for (var i = 0; i < data.entries.length; i++) {
       var e = data.entries[i];
       var rel = join(cwd, e.name);
+      entries.push(rel);
+      var on = !!picked[rel];
       var sub = e.isDir ? t("folder") : fmtSize(e.size);
       if (e.modTime) sub += " · " + fmtTime(e.modTime);
       var delay = Math.min(i, 9) * 0.022;
@@ -1157,8 +1537,14 @@ button.action svg { width: 18px; height: 18px; }
       actions += "</span>";
 
       html += '<li data-rel="' + esc(rel) + '" data-dir="' + (e.isDir ? "1" : "0") +
-        '" style="animation-delay:' + delay.toFixed(3) + 's">' +
-        '<span class="ico' + (e.isDir ? " dir" : "") + '">' + (e.isDir ? ICO_DIR : fileIcon(e.name)) + "</span>" +
+        '"' + (on ? ' class="sel"' : "") +
+        ' style="animation-delay:' + delay.toFixed(3) + 's">' +
+        '<span class="pick-zone" data-pick="' + esc(rel) + '">' +
+        '<button type="button" class="pick' + (on ? " on" : "") + '"' +
+        ' aria-pressed="' + (on ? "true" : "false") +
+        '" aria-label="' + esc(t("selectItem", { name: e.name })) + '"><i>' + ICO_CHECK + "</i></button>" +
+        '<span class="ico' + (e.isDir ? " dir" : "") + '">' +
+        (e.isDir ? ICO_DIR : fileIcon(e.name)) + "</span></span>" +
         '<span class="meta"><span class="name">' + esc(e.name) + "</span>" +
         '<span class="sub">' + esc(sub) + "</span></span>" +
         actions +
@@ -1167,6 +1553,7 @@ button.action svg { width: 18px; height: 18px; }
     html += "</ul>";
     $main.innerHTML = html;
     $main.scrollTop = 0;
+    updateSelBar();
   }
 
   $crumbs.addEventListener("click", function (ev) {
@@ -1182,6 +1569,14 @@ button.action svg { width: 18px; height: 18px; }
   });
 
   $main.addEventListener("click", function (ev) {
+    // The checkbox column and the icon beside it are the selection hot spots.
+    var pk = ev.target.closest("[data-pick]");
+    if (pk) {
+      ev.stopPropagation();
+      togglePick(pk.closest("li"), pk.getAttribute("data-pick"));
+      return;
+    }
+
     var dl = ev.target.closest("button[data-dl]");
     if (dl) {
       ev.stopPropagation();
@@ -1214,14 +1609,23 @@ button.action svg { width: 18px; height: 18px; }
       return;
     }
 
-    // Tapping a file row no longer downloads it — that is what the download
-    // button is for. Only directories navigate.
+    // Name and the space to its right open a folder. For files that whole
+    // area is intentionally inert — downloading lives in its own button.
     var li = ev.target.closest("li[data-rel]");
-    if (!li) return;
-    if (li.getAttribute("data-dir") === "1") {
-      nav(shareId, li.getAttribute("data-rel"));
-    }
+    if (!li || li.getAttribute("data-dir") !== "1") return;
+    nav(shareId, li.getAttribute("data-rel"));
   });
+
+  $selAll.addEventListener("click", toggleSelectAll);
+
+  document.getElementById("selDownload").addEventListener("click", downloadZip);
+
+  document.getElementById("selClear").addEventListener("click", function () {
+    clearPicked();
+    syncPicks();
+  });
+
+  $backBtn.addEventListener("click", goBack);
 
   function downloadFile(rel) {
     var name = rel.split("/").pop();

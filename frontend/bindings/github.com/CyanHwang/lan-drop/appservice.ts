@@ -10,7 +10,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -27,10 +27,8 @@ import * as $models from "./models.js";
  * AddShare opens the native directory picker and appends the choice. Returns
  * the full list so the UI can re-render from a single source of truth.
  */
-export function AddShare(): $CancellablePromise<transfer$0.Share[]> {
-    return $Call.ByID(871401844).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function AddShare(): $CancellablePromise<transfer$0.Share[] | null> {
+    return $Call.ByID(871401844);
 }
 
 /**
@@ -79,10 +77,8 @@ export function Quit(): $CancellablePromise<void> {
     return $Call.ByID(2719743713);
 }
 
-export function RemoveShare(id: string): $CancellablePromise<transfer$0.Share[]> {
-    return $Call.ByID(2816384405, id).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function RemoveShare(id: string): $CancellablePromise<transfer$0.Share[] | null> {
+    return $Call.ByID(2816384405, id);
 }
 
 /**
@@ -105,52 +101,34 @@ export function SetLanguage(tag: string): $CancellablePromise<string> {
  * applies them without a restart — the next listing request picks them up.
  */
 export function SetViewOptions(o: $models.ViewOptions): $CancellablePromise<$models.ViewOptions> {
-    return $Call.ByID(3237679895, o).then(($result: any) => {
-        return $$createType2($result);
-    });
+    return $Call.ByID(3237679895, o);
 }
 
 /**
  * Shares returns the persisted share list.
  */
-export function Shares(): $CancellablePromise<transfer$0.Share[]> {
-    return $Call.ByID(3527314006).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function Shares(): $CancellablePromise<transfer$0.Share[] | null> {
+    return $Call.ByID(3527314006);
 }
 
 /**
  * Start serves every persisted share on the LAN.
  */
 export function Start(port: number): $CancellablePromise<transfer$0.Info> {
-    return $Call.ByID(2780549810, port).then(($result: any) => {
-        return $$createType3($result);
-    });
+    return $Call.ByID(2780549810, port);
 }
 
 export function Status(): $CancellablePromise<transfer$0.Info> {
-    return $Call.ByID(838280468).then(($result: any) => {
-        return $$createType3($result);
-    });
+    return $Call.ByID(838280468);
 }
 
 export function Stop(): $CancellablePromise<transfer$0.Info> {
-    return $Call.ByID(2098087154).then(($result: any) => {
-        return $$createType3($result);
-    });
+    return $Call.ByID(2098087154);
 }
 
 /**
  * ViewOptions returns the persisted listing filters.
  */
 export function ViewOptions(): $CancellablePromise<$models.ViewOptions> {
-    return $Call.ByID(4230719735).then(($result: any) => {
-        return $$createType2($result);
-    });
+    return $Call.ByID(4230719735);
 }
-
-// Private type creation functions
-const $$createType0 = transfer$0.Share.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.ViewOptions.createFrom;
-const $$createType3 = transfer$0.Info.createFrom;

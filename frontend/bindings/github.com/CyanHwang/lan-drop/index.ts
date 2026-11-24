@@ -6,6 +6,6 @@ export {
     AppService
 };
 
-export {
+export type {
     ViewOptions
 } from "./models.js";

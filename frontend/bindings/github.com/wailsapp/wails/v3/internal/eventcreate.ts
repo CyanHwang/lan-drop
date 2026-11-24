@@ -6,17 +6,4 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as transfer$0 from "../../../../CyanHwang/lan-drop/internal/transfer/models.js";
-
-function configure() {
-    Object.freeze(Object.assign($Create.Events, {
-        "transfer:progress": $$createType0,
-    }));
-}
-
-// Private type creation functions
-const $$createType0 = transfer$0.Progress.createFrom;
-
-configure();
+Object.freeze($Create.Events);
