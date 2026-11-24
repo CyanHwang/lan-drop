@@ -26,15 +26,17 @@ var versionLine = regexp.MustCompile(`^(\s*version:\s*)"([^"]+)"(\s*(?:#.*)?)$`)
 
 type edit struct {
 	file string
+	// kind selects the line shape to rewrite:
+	//   ""          quoted value after a colon (YAML/JSON)
+	//   "plist"     <string> after a CFBundle version key
+	//   "plistdev"  same, but CFBundleShortVersionString keeps a -dev suffix
+	//   "define"    NSIS `!define NAME "x"`
+	//   "manifest"  Windows `assemblyIdentity ... version="x"`
+	//   "four"      MSIX Version="x.0"
+	kind string
 	// want is how many version-bearing lines in this file should carry the
 	// target version. Checking this count catches both stale and partial edits.
 	want int
-	// four tells the scanner to expect MAJOR.MINOR.PATCH.0 (MSIX packages).
-	four bool
-	// plist restricts scanning to <string> values that follow a CFBundle
-	// version key, so unrelated values such as LSMinimumSystemVersion are
-	// left alone.
-	plist bool
 	// limit caps how many leading version lines belong to this file. Needed
 	// for package-lock.json, whose dependency entries also carry "version".
 	limit int
@@ -64,18 +66,21 @@ func main() {
 		}
 	}
 
-	// build/config.yml is the source; the rest are derived. MSIX manifests use
-	// a fourth version component, which is why those two carry the four flag.
+	// build/config.yml is the source; every other file is derived.
 	edits := []edit{
 		{file: "build/config.yml", want: 1},
-		{file: "build/darwin/Info.plist", want: 2, plist: true},
-		{file: "build/darwin/Info.dev.plist", want: 2, plist: true},
+		{file: "build/darwin/Info.plist", kind: "plist", want: 2},
+		{file: "build/darwin/Info.dev.plist", kind: "plist", want: 2},
+		{file: "build/ios/Info.plist", kind: "plist", want: 2},
+		{file: "build/ios/Info.dev.plist", kind: "plistdev", want: 2},
 		{file: "build/windows/info.json", want: 4},
+		{file: "build/windows/wails.exe.manifest", kind: "manifest", want: 1},
+		{file: "build/windows/nsis/wails_tools.nsh", kind: "define", want: 1},
 		{file: "build/linux/nfpm/nfpm.yaml", want: 1},
 		{file: "frontend/package.json", want: 1},
 		{file: "frontend/package-lock.json", want: 2, limit: 2},
-		{file: "build/windows/msix/app_manifest.xml", want: 1, four: true},
-		{file: "build/windows/msix/template.xml", want: 1, four: true},
+		{file: "build/windows/msix/app_manifest.xml", kind: "four", want: 1},
+		{file: "build/windows/msix/template.xml", kind: "four", want: 1},
 	}
 
 	want := target
@@ -87,14 +92,14 @@ func main() {
 			fail(err)
 		}
 		expected := want
-		if e.four {
+		if e.kind == "four" {
 			expected += ".0"
 		}
 		limit := e.limit
 		if limit == 0 {
 			limit = e.want
 		}
-		after, found, total := rewriteVersionLines(string(before), expected, e.plist, limit)
+		after, found, total := rewriteVersionLines(string(before), expected, e.kind, limit)
 
 		// total counts the version lines in scope; it must match what this
 		// file is known to contain. In check mode every one of them must
@@ -132,80 +137,107 @@ func main() {
 // that happens to mention a version untouched. It returns the rewritten text,
 // how many lines already carried want, and how many version lines exist in
 // total. The caller compares both numbers to catch stale or malformed files.
-func rewriteVersionLines(src, want string, plist bool, limit int) (string, int, int) {
+func rewriteVersionLines(src, want, kind string, limit int) (string, int, int) {
 	lines := strings.SplitAfter(src, "\n")
 	found, total := 0, 0
-	versionKey := false
+	versionKey := ""
 	for i, line := range lines {
 		if limit > 0 && total >= limit {
 			break
 		}
 		trimmed := strings.TrimSpace(line)
-		if plist {
+		old, open, close, ok := "", `"`, `"`, false
+
+		switch kind {
+		case "plist", "plistdev":
 			if strings.HasPrefix(trimmed, "<key>") {
-				versionKey = trimmed == "<key>CFBundleShortVersionString</key>" ||
-					trimmed == "<key>CFBundleVersion</key>"
+				versionKey = versionPlistKey(trimmed)
 			}
-			if !versionKey || !strings.HasPrefix(trimmed, "<string>") {
+			if versionKey == "" || !strings.HasPrefix(trimmed, "<string>") {
 				continue
 			}
-			versionKey = false
-		} else if !isVersionContext(line) {
-			continue
+			end := strings.Index(trimmed, "</string>")
+			if end < 0 {
+				continue
+			}
+			old, open, close, ok = trimmed[len("<string>"):end], "<string>", "</string>", true
+			versionKey = ""
+		case "define":
+			if !strings.HasPrefix(trimmed, "!define INFO_PRODUCTVERSION ") {
+				continue
+			}
+			old, ok = quotedValue(trimmed)
+		case "manifest":
+			if !strings.HasPrefix(trimmed, "<assemblyIdentity") || !strings.Contains(trimmed, "version=") {
+				continue
+			}
+			old, ok = attrValue(trimmed, "version")
+		case "four":
+			if !strings.HasPrefix(trimmed, "Version=") {
+				continue
+			}
+			old, ok = attrValue(trimmed, "Version")
+		default:
+			if !isVersionContext(line) {
+				continue
+			}
+			old, ok = quotedValue(trimmed)
 		}
-		old, ok := versionValue(line)
 		if !ok {
 			continue
 		}
+
+		// A dev plist keeps its -dev suffix on the short version key.
+		expected := want
+		if kind == "plistdev" && strings.HasSuffix(old, "-dev") {
+			expected += "-dev"
+		}
 		total++
-		if old == want {
+		if old == expected {
 			found++
 			continue
 		}
-		// plist values are wrapped in <string>, everything else in quotes.
-		open, close := `"`, `"`
-		if plist {
-			open, close = "<string>", "</string>"
-		}
-		lines[i] = strings.Replace(line, open+old+close, open+want+close, 1)
+		lines[i] = strings.Replace(line, open+old+close, open+expected+close, 1)
 	}
 	return strings.Join(lines, ""), found, total
 }
 
-// versionValue extracts the quoted version from a version-assignment line.
-// It handles YAML (`version: "x"`), JSON (`"version": "x"`), plist
-// (`<string>x</string>`) and MSIX (`Version="x"`) forms.
-func versionValue(line string) (string, bool) {
-	s := strings.TrimSpace(line)
-	switch {
-	case strings.HasPrefix(s, "<string>"):
-		end := strings.Index(s, "</string>")
-		if end < 0 {
-			return "", false
-		}
-		return s[len("<string>"):end], true
-	case strings.HasPrefix(s, "Version=\""):
-		rest := s[len("Version=\""):]
-		end := strings.IndexByte(rest, '"')
-		if end < 0 {
-			return "", false
-		}
-		return rest[:end], true
-	default:
-		// JSON/YAML: take the quoted value after the first colon, not the
-		// quoted key. Lines look like `"file_version": "0.1.0",`.
-		colon := strings.IndexByte(s, ':')
-		first := strings.IndexByte(s[colon+1:], '"')
-		if colon < 0 || first < 0 {
-			return "", false
-		}
-		first += colon + 1
-		last := strings.LastIndexByte(s, '"')
-		if last <= first {
-			return "", false
-		}
-		return s[first+1 : last], true
+func versionPlistKey(s string) string {
+	if s == "<key>CFBundleVersion</key>" {
+		return "build"
 	}
+	if s == "<key>CFBundleShortVersionString</key>" {
+		return "short"
+	}
+	return ""
+}
+
+// quotedValue returns the contents of the last quoted string on a line.
+func quotedValue(s string) (string, bool) {
+	last := strings.LastIndexByte(s, '"')
+	if last < 0 {
+		return "", false
+	}
+	first := strings.LastIndexByte(s[:last], '"')
+	if first < 0 {
+		return "", false
+	}
+	return s[first+1 : last], true
+}
+
+// attrValue returns the value of attribute="..." on a line.
+func attrValue(s, attr string) (string, bool) {
+	key := attr + `="`
+	i := strings.Index(s, key)
+	if i < 0 {
+		return "", false
+	}
+	rest := s[i+len(key):]
+	end := strings.IndexByte(rest, '"')
+	if end < 0 {
+		return "", false
+	}
+	return rest[:end], true
 }
 
 func isVersionContext(line string) bool {
@@ -215,8 +247,7 @@ func isVersionContext(line string) bool {
 		strings.HasPrefix(trimmed, `"file_version"`) ||
 		strings.HasPrefix(trimmed, `"product_version"`) ||
 		strings.HasPrefix(trimmed, `"FileVersion"`) ||
-		strings.HasPrefix(trimmed, `"ProductVersion"`) ||
-		strings.HasPrefix(trimmed, "Version=")
+		strings.HasPrefix(trimmed, `"ProductVersion"`)
 }
 
 func readConfigVersion(path string) (string, error) {

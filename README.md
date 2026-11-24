@@ -15,7 +15,7 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
   <img src="docs/mobile.png" width="300" alt="LanDrop on a phone, light theme">
   <img src="docs/mobile-dark.png" width="300" alt="LanDrop on a phone, dark theme">
 </p>
-<p align="center"><sub>The browser UI. Theme follows the system; language switches from the top bar.</sub></p>
+<p align="center"><sub>The browser UI (screenshots show the v0.1.0 layout). v0.2.0 adds per-row checkboxes for batch download, a back button and a selection bar. Theme follows the system.</sub></p>
 
 **Written entirely by AI.** Every line of Go, TypeScript, CSS, build configuration and documentation in this repository was produced by an AI coding agent.
 
@@ -28,7 +28,8 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
 | **Nothing to install** | The other device only needs a browser. Scan the QR code or type the URL |
 | **Multiple folders** | Every shared folder appears under one virtual root, browsable like a normal file tree |
 | **Streaming transfers** | Constant 256 KB of memory. A 100 GB file costs the same as a 1 MB one |
-| **Resumable** | Uploads continue via `X-Offset`; downloads use standard HTTP `Range`. Survives a dropped connection |
+| **Batch download** | Select files and folders with checkboxes and download them as one zip, streamed uncompressed for LAN speed |
+| **Resumable** | Uploads continue via `X-Offset`; single-file downloads use standard HTTP `Range`. Survives a dropped connection |
 | **Live progress** | The desktop window shows direction, speed, elapsed time and the peer's IP for every transfer |
 | **Read-only mode** | Serve files without letting the network write to them |
 | **Two languages** | English and Simplified Chinese, detected on first launch and switchable at runtime |
@@ -42,8 +43,8 @@ LanDrop is a [Wails](https://v3.wails.io) v3 application: a Go backend and a
 React frontend compiled into a single binary.
 
 What matters is what it leaves out. Wails does not bundle a browser engine — it
-drives the one already on the system: WebView2 on Windows, WKWebView on macOS,
-WebKitGTK on Linux. No Chromium, no Node runtime, no `node_modules` at runtime.
+drives the one already on the system: WebView2 on Windows, WebKitGTK on Linux.
+No Chromium, no Node runtime, no `node_modules` at runtime.
 
 The result is an executable of about 13 MB that starts instantly and idles at a
 few tens of megabytes. An Electron app of comparable scope typically ships
@@ -186,7 +187,8 @@ The browser page and every endpoint share one port. No extra services.
 |---|---|---|
 | GET | `/` | Browser UI |
 | GET | `/api/list?share=&dir=` | Directory listing. Empty `share` returns the virtual root |
-| GET | `/api/download?share=&path=` | Download, supports `Range` |
+| GET | `/api/download?share=&path=` | Single-file download, supports `Range` |
+| GET / POST | `/api/download/zip?share=&dir=&paths=...` | Batch zip. `paths` repeats; POST accepts a form body for large selections |
 | GET | `/api/probe?share=&dir=&name=` | Bytes already received for a given file |
 | PUT | `/api/upload?share=&dir=&name=` | Streaming upload. `X-Offset` sets the resume point |
 | POST | `/api/mkdir?share=&dir=&name=` | Create a folder |
@@ -194,6 +196,12 @@ The browser page and every endpoint share one port. No extra services.
 | GET | `/api/info` | Status, share count, read-only flag, language |
 
 **Resume contract**: `X-Offset` must equal the exact byte count on disk. Otherwise the server returns `409` with the real size and the client restarts from there.
+
+**Batch downloads** are stored uncompressed (`zip.Store`) — on a LAN the link is
+the bottleneck, and deflating video or archives just burns CPU. Because the zip
+is streamed, it has no `Content-Length`: the browser cannot show a percentage
+and a dropped transfer restarts from zero. Single-file downloads keep their
+`Range` support, so grab one large file directly rather than through the zip.
 
 The browser client decides where to resume by asking how many bytes the server already holds for that *file name*. Picking a different file with the same name therefore continues from the wrong offset — there is no content hash to tell them apart.
 
@@ -218,7 +226,8 @@ internal/config      lan-drop.ini read/write, legacy migrations
 internal/i18n        Message catalogue and OS language detection
 internal/transfer    HTTP server, path validation, streaming, progress
   server.go          Listener lifecycle, routing, path resolution
-  handlers.go        The seven endpoints
+  handlers.go        The single-file and write endpoints
+  zip.go             Streaming batch zip, folder walking, entry naming
   netutil.go         Port probing, LAN address ranking
   mobile.html        The embedded browser UI
 ```
@@ -267,7 +276,7 @@ runs `version:check` on every push. Pushing a `v*` tag syncs all versions from
 that tag before building, so artifacts always match the release they ship under.
 
 Release notes live in `.github/release-notes/<tag>.md` (for example
-`v0.1.0.md`). A version without a note there falls back to GitHub's
+`v0.2.0.md`). A version without a note there falls back to GitHub's
 auto-generated release notes.
 
 ## Roadmap

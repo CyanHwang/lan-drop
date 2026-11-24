@@ -17,7 +17,7 @@
         PackageDisplayName="LanDrop"
         PublisherName="CN=LanDrop"
         PublisherDisplayName="LanDrop"
-        Version="0.1.0.0"
+        Version="0.2.0.0"
         PackageDescription="Share folders over your local network">
         <Capabilities>
             <Capability Name="runFullTrust" />

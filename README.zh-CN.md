@@ -15,7 +15,7 @@
   <img src="docs/mobile.zh-CN.png" width="300" alt="LanDrop 手机端 · 浅色">
   <img src="docs/mobile.zh-CN-dark.png" width="300" alt="LanDrop 手机端 · 深色">
 </p>
-<p align="center"><sub>浏览器端界面。主题跟随系统，语言可在顶栏切换。</sub></p>
+<p align="center"><sub>浏览器端界面（截图为 v0.1.0 布局）。v0.2.0 增加了逐行复选框用于批量下载、返回按钮和选择栏。主题跟随系统。</sub></p>
 
 **本项目全部由 AI 编写。** 仓库中的 Go、TypeScript、CSS、构建配置和文档，每一行都由 AI 生成。
 
@@ -28,7 +28,8 @@
 | **零客户端** | 对端只需要浏览器。手机扫码、电脑输地址，打开就能用 |
 | **多目录共享** | 多个文件夹呈现为一个虚拟根目录，像浏览文件夹一样点进去 |
 | **流式传输** | 恒定 256 KB 内存占用，单文件大小不受限制，100 GB 也不吃内存 |
-| **断点续传** | 上传按 `X-Offset` 续传，下载走标准 HTTP `Range`，断网重连接着传 |
+| **批量下载** | 复选框勾选多个文件和文件夹，打包成一个 zip 下载；不压缩，走满局域网带宽 |
+| **断点续传** | 上传按 `X-Offset` 续传，单文件下载走标准 HTTP `Range`，断网重连接着传 |
 | **实时进度** | 桌面端显示每个传输的方向、速度、耗时和对端 IP |
 | **只读模式** | 只给人看，不让网络改你的文件 |
 | **中英双语** | 首次启动自动检测，运行时可切换 |
@@ -41,8 +42,8 @@
 LanDrop 是一个 [Wails](https://v3.wails.io) v3 应用：Go 写后端，React 写界面，编译成单个二进制。
 
 关键在于它**不含**什么。Wails 不打包浏览器内核，而是驱动系统已有的那个：Windows 上是
-WebView2，macOS 上是 WKWebView，Linux 上是 WebKitGTK。没有 Chromium，没有 Node
-运行时，运行时也不需要 `node_modules`。
+WebView2，Linux 上是 WebKitGTK。没有 Chromium，没有 Node 运行时，运行时也不需要
+`node_modules`。
 
 结果是一个约 13 MB 的可执行文件，启动即开，空闲时只占几十兆内存。同等功能的 Electron
 应用通常在 100 MB 以上，还没算上你的数据。
@@ -183,7 +184,8 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 |---|---|---|
 | GET | `/` | 浏览器界面 |
 | GET | `/api/list?share=&dir=` | 目录列表；`share` 为空时返回虚拟根 |
-| GET | `/api/download?share=&path=` | 下载，支持 `Range` |
+| GET | `/api/download?share=&path=` | 单文件下载，支持 `Range` |
+| GET / POST | `/api/download/zip?share=&dir=&paths=...` | 批量打包；`paths` 可重复，POST 用表单体提交大量选择 |
 | GET | `/api/probe?share=&dir=&name=` | 查询服务器上已收到的字节数 |
 | PUT | `/api/upload?share=&dir=&name=` | 流式上传，`X-Offset` 指定续传起点 |
 | POST | `/api/mkdir?share=&dir=&name=` | 新建文件夹 |
@@ -191,6 +193,10 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 | GET | `/api/info` | 运行状态、共享目录数量、是否只读、当前语言 |
 
 **续传约定**：`X-Offset` 必须等于磁盘上的实际字节数，否则服务端返回 `409` 并附上真实大小，客户端据此重来。
+
+**批量打包**采用不压缩存储（`zip.Store`）——局域网里带宽才是瓶颈，压缩视频和压缩包只是白烧
+CPU。zip 是流式输出的，没有 `Content-Length`：浏览器显示不了百分比，中途断开也只能从头再传。
+单个大文件建议直接走单文件下载，那条路保留 `Range` 续传。
 
 浏览器端靠「这个文件名下服务端已有多少字节」来决定从哪续传。因此换一个同名但内容不同的文件，会从错误的位置接着写——没有内容哈希可以区分。
 
@@ -215,7 +221,8 @@ internal/config      lan-drop.ini 读写与旧格式迁移
 internal/i18n        消息表与系统语言检测
 internal/transfer    HTTP 服务、路径校验、流式收发、进度上报
   server.go          监听器生命周期、路由注册、路径解析
-  handlers.go        7 个接口的实现
+  handlers.go        单文件下载与写入类接口
+  zip.go             流式批量打包、目录遍历、条目命名
   netutil.go         端口探测、局域网 IP 排序
   mobile.html        内嵌的浏览器端单页
 ```
@@ -261,7 +268,7 @@ wails3 task version:check               # 校验所有文件是否一致
 `version:check`。推送 `v*` 标签时，CI 会先从标签同步版本号再构建，确保产物版本
 与发布标签一致。
 
-发布说明放在 `.github/release-notes/<tag>.md`（例如 `v0.1.0.md`）。某个版本没有
+发布说明放在 `.github/release-notes/<tag>.md`（例如 `v0.2.0.md`）。某个版本没有
 对应文件时，回退到 GitHub 自动生成的发布说明。
 
 ## 路线图

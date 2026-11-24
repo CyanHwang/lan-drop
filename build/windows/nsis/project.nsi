@@ -22,7 +22,7 @@ Unicode true
 ## !define INFO_PROJECTNAME    "my-project" # Default "LanDrop"
 ## !define INFO_COMPANYNAME    "LanDrop" # Default "LanDrop"
 ## !define INFO_PRODUCTNAME    "LanDrop" # Default "LanDrop"
-## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.0"
+## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.2.0"
 ## !define INFO_COPYRIGHT      "(c) Now, LanDrop" # Default "© 2026, LanDrop"
 ###
 ## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "LanDrop.exe"
