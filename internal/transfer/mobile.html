@@ -703,6 +703,55 @@ button.action svg { width: 18px; height: 18px; }
   padding: 3px 7px; border-radius: 7px; cursor: pointer;
 }
 .sheet-head button:active { background: var(--surface-2); }
+/* Destructive: dropping the queue is the one irreversible action in this panel. */
+.sheet-head button.danger { color: var(--err); }
+.sheet-head button.danger:active { background: var(--err-soft); }
+
+/* Floating entry point while the panel is hidden. Hiding it must not also hide
+   the only way back to progress and to the cancel button. */
+.up-pill {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  transform: translateX(-50%);
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+}
+.up-pill[hidden] { display: none; }
+.up-pill-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #fff;
+  animation: up-pulse 1.4s ease-in-out infinite;
+}
+@keyframes up-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* Drop target is the whole window: aiming at a 300 px panel is silly. */
+.drop-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 2px dashed var(--accent);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.drop-hint[hidden] { display: none; }
 
 .sheet-body {
   overflow-y: auto;
@@ -874,6 +923,7 @@ button.action svg { width: 18px; height: 18px; }
     <div class="sheet-head">
       <b id="sheetTitle" data-i18n="upload">Upload</b>
       <span class="spacer"></span>
+      <button id="sheetCancel" class="danger" type="button" data-i18n="cancelAll" hidden>Cancel all</button>
       <button id="sheetClose" type="button" data-i18n="hide">Hide</button>
     </div>
     <div class="sheet-body" id="sheetBody"></div>
@@ -901,6 +951,12 @@ button.action svg { width: 18px; height: 18px; }
         <path d="M12 11v5M9.5 13.5h5"/>
       </svg>
     </button>
+    <button class="action ghost" id="uploadDirBtn" data-i18n-aria="uploadFolder" aria-label="Upload folder" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <path d="M12 16v-5M9.5 13.5L12 11l2.5 2.5"/>
+      </svg>
+    </button>
     <button class="action primary" id="uploadBtn" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 19V5M6 11l6-6 6 6"/>
@@ -908,8 +964,13 @@ button.action svg { width: 18px; height: 18px; }
       <span data-i18n="uploadFiles">Upload files</span>
     </button>
     <input type="file" id="fileInput" multiple hidden>
+    <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
   </footer>
 </div>
+<button class="up-pill" id="upPill" type="button" hidden>
+  <span class="up-pill-dot"></span><span id="upPillText"></span>
+</button>
+<div class="drop-hint" id="dropHint" hidden><span data-i18n="dropHere">Drop to upload</span></div>
 <div class="toast" id="toast"></div>
 <!-- Reused for every batch download: a folder with thousands of entries would
      otherwise produce a URL long enough for some browsers to truncate. -->
@@ -928,6 +989,9 @@ button.action svg { width: 18px; height: 18px; }
       hide: "Hide",
       newFolder: "New folder",
       uploadFiles: "Upload files",
+      uploadFolder: "Upload folder",
+      dropHere: "Drop to upload",
+      activeUploads: "{done}/{total} uploading",
       root: "Home",
       noShares: "No shared folders yet",
       sharedFolder: "Shared folder",
@@ -945,12 +1009,21 @@ button.action svg { width: 18px; height: 18px; }
       createFailed: "Create failed: {err}",
       connLost: "Connection lost",
       cancelled: "Cancelled",
+      stalled: "Transfer stalled",
+      readFailed: "Cannot read the file",
+      retrying: "Retry {n}: {err}",
+      busy: "Another device is uploading this file",
+      sizeMismatch: "Server reported a different size",
       resuming: "Resuming {name}",
       filesFailed: "{n} file(s) failed",
       filesUploaded: "Uploaded {n} file(s)",
       uploading: "Uploading {done}/{total}",
       uploadDone: "Upload complete",
       uploadCount: "Upload {done}/{total}",
+      cancelAll: "Cancel all",
+      cancelAllAsk: "Cancel all uploads? Data already sent will be deleted from the server.",
+      uploadCancelled: "All uploads cancelled",
+      serverDown: "Service stopped",
       done: "Done · {size}",
       failed: "Failed: {err}",
       unknownError: "unknown error",
@@ -973,12 +1046,15 @@ button.action svg { width: 18px; height: 18px; }
       selectNothing: "Nothing selected",
       tooManyPicked: "At most {n} items per download"
     },
-    "zh-CN": {
+    "zh-Hans": {
       connecting: "连接中",
       upload: "上传",
       hide: "收起",
       newFolder: "新建文件夹",
       uploadFiles: "上传文件",
+      uploadFolder: "上传文件夹",
+      dropHere: "松开即可上传",
+      activeUploads: "{done}/{total} 正在上传",
       root: "根目录",
       noShares: "还没有共享目录",
       sharedFolder: "共享目录",
@@ -996,12 +1072,21 @@ button.action svg { width: 18px; height: 18px; }
       createFailed: "创建失败：{err}",
       connLost: "连接中断",
       cancelled: "已取消",
+      stalled: "传输卡住",
+      readFailed: "读取文件失败",
+      retrying: "第 {n} 次重试：{err}",
+      busy: "另一台设备正在上传这个文件",
+      sizeMismatch: "服务端返回的大小不一致",
       resuming: "继续传输 {name}",
       filesFailed: "{n} 个文件失败",
       filesUploaded: "已上传 {n} 个文件",
       uploading: "正在上传 {done}/{total}",
       uploadDone: "上传完成",
       uploadCount: "上传 {done}/{total}",
+      cancelAll: "全部取消",
+      cancelAllAsk: "取消全部上传？已传输的临时数据会从服务端删除。",
+      uploadCancelled: "已取消全部上传",
+      serverDown: "服务已停止",
       done: "完成 · {size}",
       failed: "失败：{err}",
       unknownError: "未知错误",
@@ -1027,7 +1112,7 @@ button.action svg { width: 18px; height: 18px; }
   };
 
   function normalizeLang(tag) {
-    return String(tag || "").toLowerCase().indexOf("zh") === 0 ? "zh-CN" : "en";
+    return String(tag || "").toLowerCase().indexOf("zh") === 0 ? "zh-Hans" : "en";
   }
 
   // Priority: an explicit choice saved in this browser, then the language the
@@ -1100,12 +1185,23 @@ button.action svg { width: 18px; height: 18px; }
   var shareId = "";
   var shareName = "";
   var cwd = "";
+  // Stamped by the server on the way out. A tab that was opened before the
+  // binary was rebuilt keeps running the old script, and every server-side fix
+  // then looks broken; comparing ids lets the page reload itself.
+  var PAGE_BUILD = "__PAGE_BUILD__";
   // Set once from /api/info. Read-only servers hide every mutating control so
   // the UI never offers an action the server will reject.
   var readOnly = false;
   var tasks = [];
   var taskSeq = 0;
   var uploading = false;
+  // The user pressed "hide". Progress updates must not pop the panel back open
+  // — that made the button look broken — so the flag wins until a new batch.
+  var sheetHidden = false;
+  // Bumped by "cancel all". Every loop that could still be running compares
+  // against it and stops, which is what makes cancellation instant instead of
+  // "the current chunk finishes eventually".
+  var uploadEpoch = 0;
   // Selected entries, keyed by share-relative path, plus the paths currently
   // rendered. Both are reset whenever the folder changes, because a path only
   // means something relative to the listing it came from.
@@ -1127,8 +1223,14 @@ button.action svg { width: 18px; height: 18px; }
   var $sheet = document.getElementById("sheet");
   var $sheetBody = document.getElementById("sheetBody");
   var $sheetTitle = document.getElementById("sheetTitle");
+  var $sheetCancel = document.getElementById("sheetCancel");
   var $toast = document.getElementById("toast");
   var $fileInput = document.getElementById("fileInput");
+  var $dirInput = document.getElementById("dirInput");
+  var $uploadDirBtn = document.getElementById("uploadDirBtn");
+  var $upPill = document.getElementById("upPill");
+  var $upPillText = document.getElementById("upPillText");
+  var $dropHint = document.getElementById("dropHint");
   var $rootName = document.getElementById("rootName");
   var $langBtn = document.getElementById("langBtn");
   var $loadBar = document.getElementById("loadBar");
@@ -1306,16 +1408,26 @@ button.action svg { width: 18px; height: 18px; }
   function setDockEnabled(on) {
     var usable = on && !readOnly;
     document.getElementById("uploadBtn").disabled = !usable;
+    document.getElementById("uploadDirBtn").disabled = !usable;
     document.getElementById("mkdirBtn").disabled = !usable;
   }
 
-  function api(path) {
-    return fetch(path, { headers: { Accept: "application/json" } }).then(function (r) {
+  function api(path, timeoutMs) {
+    var opts = { headers: { Accept: "application/json" } };
+    var timer = 0;
+    if (timeoutMs) {
+      var ctl = new AbortController();
+      opts.signal = ctl.signal;
+      timer = setTimeout(function () { ctl.abort(); }, timeoutMs);
+    }
+    function done() { if (timer) { clearTimeout(timer); timer = 0; } }
+    return fetch(path, opts).then(function (r) {
       return r.json().then(function (data) {
+        done();
         if (!r.ok) throw new Error(data && data.error ? data.error : ("HTTP " + r.status));
         return data;
-      });
-    });
+      }, function (e) { done(); throw e; });
+    }, function (e) { done(); throw e; });
   }
 
   /* ---------------- routing ---------------- */
@@ -1647,18 +1759,20 @@ button.action svg { width: 18px; height: 18px; }
     $fileInput.click();
   });
 
-  $fileInput.addEventListener("change", function () {
-    var files = Array.prototype.slice.call($fileInput.files || []);
-    $fileInput.value = "";
-    if (!files.length) return;
-    for (var i = 0; i < files.length; i++) {
+  // enqueue turns picked or dropped files into queued tasks. dir is the folder
+  // path relative to whatever the user selected, so a dropped folder keeps its
+  // shape instead of dumping every file into the current directory.
+  function enqueue(items) {
+    if (!items || !items.length) return;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
       tasks.push({
         id: ++taskSeq,
-        file: files[i],
+        file: it.file,
         share: shareId,
-        dir: cwd,
+        dir: it.dir ? (cwd ? cwd + "/" + it.dir : it.dir) : cwd,
         loaded: 0,
-        total: files[i].size,
+        total: it.file.size,
         state: "wait",
         speed: 0,
         err: "",
@@ -1681,8 +1795,148 @@ button.action svg { width: 18px; height: 18px; }
       tasks.splice(dropAt, 1);
     }
 
+    sheetHidden = false; // a fresh batch should show itself
     renderSheet();
     pump();
+  }
+
+  $fileInput.addEventListener("change", function () {
+    var files = Array.prototype.slice.call($fileInput.files || []);
+    $fileInput.value = "";
+    if (!files.length) return;
+    enqueue(files.map(function (f) { return { file: f, dir: "" }; }));
+  });
+
+  // A folder picker only reports files, each carrying its path relative to the
+  // selected root. The server creates the missing directories as the uploads
+  // land, so nothing else is needed here.
+  $dirInput.addEventListener("change", function () {
+    var files = Array.prototype.slice.call($dirInput.files || []);
+    $dirInput.value = "";
+    if (!files.length) return;
+    enqueue(files.map(function (f) {
+      var rel = f.webkitRelativePath || "";
+      var cut = rel.lastIndexOf("/");
+      return { file: f, dir: cut < 0 ? "" : rel.slice(0, cut) };
+    }));
+  });
+
+  $uploadDirBtn.addEventListener("click", function () {
+    if (!shareId) {
+      toast(t("enterShare"));
+      return;
+    }
+    $dirInput.click();
+  });
+
+  /* ---------------- drag and drop ---------------- */
+
+  function hasFiles(e) {
+    var dt = e.dataTransfer;
+    if (!dt) return false;
+    var types = dt.types || [];
+    for (var i = 0; i < types.length; i++) {
+      if (types[i] === "Files") return true;
+    }
+    return false;
+  }
+
+  // readEntries returns at most 100 entries per call, so a folder has to be
+  // drained in a loop until it reports empty.
+  function walkEntry(entry, dir, out) {
+    return new Promise(function (resolve) {
+      if (entry.isFile) {
+        entry.file(function (f) {
+          out.files.push({ file: f, dir: dir });
+          resolve();
+        }, function () { resolve(); });
+        return;
+      }
+      if (!entry.isDirectory) {
+        resolve();
+        return;
+      }
+      var sub = dir ? dir + "/" + entry.name : entry.name;
+      out.dirs.push(sub);
+      var reader = entry.createReader();
+      var pendingReads = [];
+      (function readBatch() {
+        reader.readEntries(function (batch) {
+          if (!batch.length) {
+            Promise.all(pendingReads).then(function () { resolve(); });
+            return;
+          }
+          for (var i = 0; i < batch.length; i++) {
+            pendingReads.push(walkEntry(batch[i], sub, out));
+          }
+          readBatch();
+        }, function () { resolve(); });
+      })();
+    });
+  }
+
+  // An empty folder contains no files to create it, so it gets an explicit
+  // mkdir. Best effort: a failure costs an empty directory, nothing more.
+  function ensureDir(rel) {
+    var full = cwd ? cwd + "/" + rel : rel;
+    var cut = full.lastIndexOf("/");
+    var parent = cut < 0 ? "" : full.slice(0, cut);
+    var leaf = cut < 0 ? full : full.slice(cut + 1);
+    if (!leaf) return;
+    fetch("/api/mkdir?share=" + encodeURIComponent(shareId) +
+      "&dir=" + encodeURIComponent(parent) + "&name=" + encodeURIComponent(leaf),
+      { method: "POST" }).catch(function () { /* the upload recreates it */ });
+  }
+
+  async function dropUpload(dt) {
+    var items = dt.items;
+    if (!items || !items.length || typeof items[0].webkitGetAsEntry !== "function") {
+      // Older browsers: files only, folders arrive as a flat list.
+      enqueue(Array.prototype.slice.call(dt.files || []).map(function (f) {
+        return { file: f, dir: "" };
+      }));
+      return;
+    }
+    var entries = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind !== "file") continue;
+      var entry = items[i].webkitGetAsEntry();
+      if (entry) entries.push(entry);
+    }
+    var out = { files: [], dirs: [] };
+    await Promise.all(entries.map(function (e) { return walkEntry(e, "", out); }));
+    out.dirs.forEach(function (d) { ensureDir(d); });
+    if (out.files.length) enqueue(out.files);
+  }
+
+  var dragDepth = 0;
+  window.addEventListener("dragenter", function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    if (shareId && !readOnly) $dropHint.hidden = false;
+  });
+  window.addEventListener("dragover", function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); // without this the drop event never fires
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  });
+  window.addEventListener("dragleave", function (e) {
+    if (!hasFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) $dropHint.hidden = true;
+  });
+  window.addEventListener("drop", function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); // otherwise the browser opens the file instead
+    dragDepth = 0;
+    $dropHint.hidden = true;
+    if (!shareId) {
+      toast(t("enterShare"));
+      return;
+    }
+    if (readOnly) return;
+    dropUpload(e.dataTransfer).catch(function () { /* nothing usable */ });
   });
 
   document.getElementById("mkdirBtn").addEventListener("click", function () {
@@ -1704,42 +1958,153 @@ button.action svg { width: 18px; height: 18px; }
   });
 
   document.getElementById("sheetClose").addEventListener("click", function () {
+    sheetHidden = true;
     $sheet.classList.remove("show");
+    renderSheet(); // paints the pill straight away
   });
 
-  function probe(share, dir, name) {
-    return api("/api/probe?share=" + encodeURIComponent(share) +
-      "&dir=" + encodeURIComponent(dir) + "&name=" + encodeURIComponent(name));
+  $upPill.addEventListener("click", function () {
+    sheetHidden = false;
+    renderSheet();
+  });
+
+  $sheetCancel.addEventListener("click", cancelAllUploads);
+
+  // Closing the tab mid-transfer is the most expensive mistake available here:
+  // the bytes already on the server survive, but the queue does not. Ask first.
+  window.addEventListener("beforeunload", function (e) {
+    if (!uploading) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
+  function probe(share, dir, name, total) {
+    var url = "/api/probe?share=" + encodeURIComponent(share) +
+      "&dir=" + encodeURIComponent(dir) + "&name=" + encodeURIComponent(name);
+    // The total lets the server answer "this file is already complete", which
+    // is the only reliable way to skip a re-upload of something it already has.
+    if (total) url += "&total=" + encodeURIComponent(total);
+    return api(url);
   }
 
-  function putChunk(task, offset, onProgress) {
+  // Uploaded in chunks on purpose. One 5 GB request means a hiccup at 99% costs
+  // the entire request. 32 MB caps what a single failure can waste and keeps
+  // the checksum pass's working set small enough for a phone: each chunk is
+  // held in memory once so it can be hashed and sent without a second read.
+  var CHUNK_SIZE = 32 * 1024 * 1024;
+  // No upload progress for this long means the socket is dead. TCP itself can
+  // take fifteen minutes to admit that, which is an eternity in front of a
+  // screen. A watchdog aborts and lets the retry logic resume.
+  var IDLE_TIMEOUT = 45000;
+  // Consecutive attempts that advance zero bytes before giving up. A transfer
+  // that keeps making progress is never abandoned, however flaky the link.
+  var MAX_STALLED = 12;
+
+  function newUploadId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  // CRC32 over the exact bytes we are about to send. TCP's own checksum is 16
+  // bits and is usually computed by the network card, so it catches far less
+  // than people assume; this is the cheap backstop that turns "the file
+  // arrived and nobody noticed it was wrong" into a retryable error.
+  var CRC_TABLE = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) {
+      c = (c >>> 8) ^ CRC_TABLE[(c ^ bytes[i]) & 0xFF];
+    }
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  // putChunk sends bytes [offset, end) and resolves with the server's byte
+  // count, which is the only number worth trusting for the next offset.
+  function putChunk(task, offset, end, epoch, onProgress) {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
+      var watchdog = 0;
+      var settled = false;
+      // Exposed on the task so "cancel all" can abort this exact request
+      // instead of waiting for the current chunk to finish.
+      task.xhr = xhr;
+
+      function settle(fn, value) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(watchdog);
+        if (task.xhr === xhr) task.xhr = null;
+        fn(value);
+      }
+      function arm(ms) {
+        clearTimeout(watchdog);
+        watchdog = setTimeout(function () {
+          try { xhr.abort(); } catch (_) { /* already gone */ }
+          settle(reject, new Error(t("stalled")));
+        }, ms || IDLE_TIMEOUT);
+      }
+
       xhr.open("PUT", "/api/upload?share=" + encodeURIComponent(task.share) +
         "&dir=" + encodeURIComponent(task.dir) + "&name=" + encodeURIComponent(task.file.name));
       xhr.setRequestHeader("X-Offset", String(offset));
-      xhr.setRequestHeader("X-Total-Size", String(task.file.size));
+      xhr.setRequestHeader("X-Total-Size", String(task.total));
+      // The fingerprint lets the server refuse to resume into bytes that came
+      // from a different file that happened to share this name.
+      xhr.setRequestHeader("X-File-Size", String(task.total));
+      xhr.setRequestHeader("X-File-Mtime", String(task.file.lastModified || 0));
+      // One transfer, many requests: the id keeps the desktop activity list
+      // showing a single row. The server timestamps the first chunk itself —
+      // a clock from this device would just import its skew into the speed.
+      xhr.setRequestHeader("X-Upload-Id", task.uploadId);
       xhr.setRequestHeader("Content-Type", "application/octet-stream");
 
       xhr.upload.onprogress = function (e) {
+        arm();
         if (e.lengthComputable) onProgress(offset + e.loaded);
       };
+      // Body fully sent. The server may now be flushing several gigabytes to
+      // disk before it answers, so give it a much longer leash than a socket
+      // that has stopped moving data deserves.
+      xhr.upload.onload = function () { arm(300000); };
       xhr.onload = function () {
         var body = null;
         try { body = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
-        if (xhr.status === 200) {
-          resolve({ ok: true, size: body && body.size });
+        if (xhr.status === 200 && body) {
+          settle(resolve, { size: body.size, complete: !!body.complete });
         } else if (xhr.status === 409 && body) {
-          resolve({ conflict: true, size: body.size || 0 });
+          settle(resolve, { conflict: true, reset: !!body.reset, busy: !!body.busy, size: body.size || 0 });
         } else {
-          reject(new Error((body && body.error) || ("HTTP " + xhr.status)));
+          settle(reject, new Error((body && body.error) || ("HTTP " + xhr.status)));
         }
       };
-      xhr.onerror = function () { reject(new Error(t("connLost"))); };
-      xhr.onabort = function () { reject(new Error(t("cancelled"))); };
-      xhr.timeout = 0;
+      xhr.onerror = function () { settle(reject, new Error(t("connLost"))); };
+      xhr.onabort = function () { settle(reject, new Error(t("stalled"))); };
+      xhr.ontimeout = function () { settle(reject, new Error(t("stalled"))); };
+      xhr.timeout = 0; // the watchdog above is the real limit
 
-      xhr.send(task.file.slice(offset));
+      // Read the chunk once and send those same bytes, rather than handing the
+      // Blob to the browser and hashing a second copy: on a slow source disk a
+      // second read would double the very bottleneck this tool already has.
+      task.file.slice(offset, end).arrayBuffer().then(function (buf) {
+        if (settled) return;
+        if (stale(epoch)) {
+          settle(reject, new Error(t("cancelled")));
+          return;
+        }
+        xhr.setRequestHeader("X-Chunk-CRC32", String(crc32(new Uint8Array(buf))));
+        arm();
+        xhr.send(buf);
+      }, function () {
+        settle(reject, new Error(t("readFailed")));
+      });
     });
   }
 
@@ -1747,35 +2112,90 @@ button.action svg { width: 18px; height: 18px; }
     return new Promise(function (r) { setTimeout(r, ms); });
   }
 
-  async function uploadOne(task) {
+  // Exponential backoff with jitter, capped so a long outage still recovers
+  // within seconds of the network coming back.
+  function backoffMs(stalled) {
+    var base = Math.min(15000, 800 * Math.pow(2, Math.max(0, stalled - 1)));
+    return base + Math.floor(Math.random() * 400);
+  }
+
+  // A dropped link is the most common reason an upload dies on a phone or a
+  // laptop. Wait for the OS to say it is back instead of burning attempts
+  // against a network that is not there.
+  function waitOnline(ms) {
+    return new Promise(function (resolve) {
+      if (navigator.onLine !== false) { resolve(); return; }
+      var done = false;
+      function go() {
+        if (done) return;
+        done = true;
+        window.removeEventListener("online", go);
+        resolve();
+      }
+      window.addEventListener("online", go);
+      setTimeout(go, ms);
+    });
+  }
+
+  async function uploadOne(task, epoch) {
     task.state = "run";
     task.err = "";
     task.lastTime = Date.now();
     task.lastLoaded = 0;
     renderSheet();
 
+    if (stale(epoch)) return;
+
     var offset = 0;
+    var probed = false;
     try {
-      var p = await probe(task.share, task.dir, task.file.name);
-      if (p.exists && p.size > 0 && p.size < task.file.size) {
-        offset = p.size;
-        toast(t("resuming", { name: task.file.name }));
-      } else if (p.exists && p.size === task.file.size) {
+      var p = await probe(task.share, task.dir, task.file.name, task.total);
+      probed = true;
+      if (p.complete) {
         task.state = "done";
         task.loaded = task.total;
         renderSheet();
         return;
       }
+      offset = p.size || 0;
+      if (offset > 0) toast(t("resuming", { name: task.file.name }));
     } catch (_) {
-      offset = 0;
+      // Unknown, not zero. Starting at 0 would truncate whatever the server
+      // already staged, so the probe is retried inside the loop instead.
     }
 
+    if (!task.uploadId) task.uploadId = newUploadId();
+
     task.loaded = offset;
+    var stalled = 0;
+    var lastOffset = offset;
     var lastPaint = 0;
 
-    for (var attempt = 0; attempt < 6; attempt++) {
+    while (true) {
+      if (stale(epoch)) return;
+      await waitOnline(15000);
+      if (stale(epoch)) return;
+
+      var end = Math.min(offset + CHUNK_SIZE, task.total);
       try {
-        var res = await putChunk(task, offset, function (loaded) {
+        if (!probed) {
+          var first = await probe(task.share, task.dir, task.file.name, task.total);
+          probed = true;
+          if (first.complete) {
+            task.state = "done";
+            task.loaded = task.total;
+            task.err = "";
+            renderSheet();
+            return;
+          }
+          offset = first.size || 0;
+          lastOffset = offset;
+          task.loaded = offset;
+          renderSheet();
+          end = Math.min(offset + CHUNK_SIZE, task.total);
+        }
+
+        var res = await putChunk(task, offset, end, epoch, function (loaded) {
           var now = Date.now();
           var dt = now - task.lastTime;
           if (dt > 400) {
@@ -1790,51 +2210,206 @@ button.action svg { width: 18px; height: 18px; }
           }
         });
 
-        if (res.conflict) {
-          offset = res.size;
-          task.loaded = offset;
-          task.lastLoaded = offset;
-          task.lastTime = Date.now();
+        if (res.reset) {
+          // The staged bytes belong to a different file with the same name.
+          // Start over rather than splice two files together.
+          offset = 0;
+          lastOffset = 0;
+          task.loaded = 0;
+          task.err = "";
           renderSheet();
           continue;
         }
+        if (res.conflict) {
+          // Another device is mid-upload on this exact file. Waiting beats
+          // hammering: its chunks are landing, ours would only fight them.
+          if (res.busy) {
+            stalled++;
+            task.err = t("busy");
+            renderSheet();
+            if (stalled > MAX_STALLED) throw new Error(t("busy"));
+            await sleep(backoffMs(stalled));
+            continue;
+          }
+          // The server's byte count is the only one that matters.
+          var advanced = res.size !== lastOffset;
+          if (!advanced) stalled++;
+          offset = res.size;
+          lastOffset = offset;
+          task.loaded = offset;
+          renderSheet();
+          if (stalled > MAX_STALLED) throw new Error(t("connLost"));
+          // No progress means retrying instantly would just be noise.
+          if (!advanced) await sleep(backoffMs(stalled));
+          continue;
+        }
 
-        task.state = "done";
-        task.loaded = task.total;
+        offset = res.size;
+        task.loaded = offset;
+        // Do not zero the speed here: at 64 MB per chunk that would make the
+        // readout flicker to nothing roughly once a second. Resetting the
+        // window is enough for the next delta to stay honest.
+        task.lastTime = Date.now();
+        task.lastLoaded = offset;
         renderSheet();
-        return;
+
+        if (res.complete || offset >= task.total) {
+          // Never trust "done" alone: a truncated file that is reported as
+          // complete is worse than a failed transfer, because nobody retries.
+          if (offset !== task.total) throw new Error(t("sizeMismatch"));
+          task.state = "done";
+          task.loaded = task.total;
+          task.err = "";
+          renderSheet();
+          return;
+        }
+
+        stalled = 0;
+        lastOffset = offset;
       } catch (e) {
-        task.err = e.message;
+        // The abort we caused ourselves is not a failure worth retrying.
+        if (stale(epoch)) return;
+        stalled++;
+        // "Connection lost" is a lie when the service was stopped on the
+        // desktop; the watcher knows which one it is.
+        task.err = serverDown
+          ? t("serverDown")
+          : stalled > 1
+            ? t("retrying", { n: stalled, err: e.message })
+            : e.message;
         renderSheet();
-        if (attempt === 5) {
+
+        if (stalled > MAX_STALLED) {
           task.state = "err";
           renderSheet();
           return;
         }
-        await sleep(800 * (attempt + 1));
+        await sleep(backoffMs(stalled));
+        if (stale(epoch)) return;
+
+        // Ask how much actually landed: a request can die after its bytes were
+        // written, and resuming from the client's stale idea of the offset
+        // would duplicate a chunk.
         try {
-          var again = await probe(task.share, task.dir, task.file.name);
-          offset = again.size || 0;
+          var again = await probe(task.share, task.dir, task.file.name, task.total);
+          if (again.complete) {
+            task.state = "done";
+            task.loaded = task.total;
+            task.err = "";
+            renderSheet();
+            return;
+          }
+          var seen = again.size || 0;
+          if (seen > lastOffset) stalled = 0; // progress clears the give-up counter
+          offset = seen;
+          lastOffset = offset;
           task.loaded = offset;
           task.lastLoaded = offset;
           task.lastTime = Date.now();
-        } catch (_) { /* keep previous offset */ }
+        } catch (_) { /* still unreachable; keep the offset we had */ }
       }
     }
+  }
+
+  function stale(epoch) {
+    return epoch !== uploadEpoch;
+  }
+
+  // The page cannot be told that the service was stopped — there is nobody
+  // left to tell it. A light poll is the next best thing: it turns a minute of
+  // silent retries into a visible "service stopped" within a few seconds.
+  var serverDown = false;
+
+  async function watchServer(epoch) {
+    while (!stale(epoch) && uploading) {
+      await sleep(4000);
+      if (stale(epoch) || !uploading) return;
+      try {
+        // Bounded: a stopped listener should fail fast, but a firewall that
+        // drops packets instead of resetting them would hang the check for
+        // minutes and the page would never admit the service is gone.
+        await api("/api/info", 3000);
+        if (serverDown) {
+          serverDown = false;
+          renderSheet();
+        }
+      } catch (_) {
+        if (!serverDown) {
+          serverDown = true;
+          renderSheet();
+        }
+      }
+    }
+  }
+
+  // postCancel tells the server a transfer is being abandoned on purpose, so
+  // its final word is "cancelled" instead of the "client disconnected" it can
+  // only infer from a socket that dies. Bounded by a timeout: a stopped
+  // service must not make the cancel button feel broken.
+  function postCancel(id) {
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 2000);
+    return fetch("/api/upload/cancel?id=" + encodeURIComponent(id), {
+      method: "POST",
+      keepalive: true,
+      signal: ctl.signal,
+    })
+      .catch(function () { /* the server may already be gone */ })
+      .then(function () { clearTimeout(timer); });
+  }
+
+  // cancelAllUploads drops the whole queue: the chunk in flight is aborted,
+  // the ones behind it never start. Bytes already on the server are left
+  // alone — they live in the staging file, so picking the same file again
+  // resumes instead of restarting.
+  async function cancelAllUploads() {
+    var active = 0;
+    var ids = [];
+    for (var i = 0; i < tasks.length; i++) {
+      if (tasks[i].state === "run" || tasks[i].state === "wait") {
+        active++;
+        if (tasks[i].uploadId) ids.push(tasks[i].uploadId);
+      }
+    }
+    if (!active) return;
+    if (!window.confirm(t("cancelAllAsk"))) return;
+
+    uploadEpoch++;
+    // Announce first, abort second: reversing the order would let the server
+    // report a dropped connection before the cancellation arrives.
+    if (ids.length) await Promise.all(ids.map(postCancel));
+
+    for (var j = 0; j < tasks.length; j++) {
+      if (tasks[j].xhr) {
+        try { tasks[j].xhr.abort(); } catch (_) { /* already finished */ }
+        tasks[j].xhr = null;
+      }
+    }
+    // Finished transfers are history and stay; everything else is gone.
+    tasks = tasks.filter(function (t) { return t.state === "done"; });
+    uploading = false;
+    serverDown = false;
+    renderSheet();
+    toast(t("uploadCancelled"));
   }
 
   async function pump() {
     if (uploading) return;
     uploading = true;
+    var epoch = uploadEpoch;
     $sheet.classList.add("show");
-    while (true) {
+    watchServer(epoch);
+    while (epoch === uploadEpoch) {
       var next = null;
       for (var i = 0; i < tasks.length; i++) {
         if (tasks[i].state === "wait") { next = tasks[i]; break; }
       }
       if (!next) break;
-      await uploadOne(next);
+      await uploadOne(next, epoch);
     }
+    // A cancel already reset the flag and the queue; touching either here
+    // would clobber an upload the user started right after.
+    if (stale(epoch)) return;
     uploading = false;
 
     var failed = tasks.filter(function (t) { return t.state === "err"; }).length;
@@ -1856,14 +2431,24 @@ button.action svg { width: 18px; height: 18px; }
     if (!tasks.length) {
       $sheet.classList.remove("show");
       $sheetBody.innerHTML = "";
+      $sheetCancel.hidden = true;
+      $sheetTitle.textContent = t("upload");
+      $upPill.hidden = true;
+      sheetHidden = false;
       return;
     }
 
     var done = tasks.filter(function (x) { return x.state === "done"; }).length;
     var running = tasks.filter(function (x) { return x.state === "run"; }).length;
-    $sheetTitle.textContent = running > 0
-      ? t("uploading", { done: done, total: tasks.length })
-      : (done === tasks.length ? t("uploadDone") : t("uploadCount", { done: done, total: tasks.length }));
+    var pending = tasks.filter(function (x) { return x.state === "run" || x.state === "wait"; }).length;
+    // Nothing to cancel once the queue has drained; a button that does nothing
+    // is worse than no button.
+    $sheetCancel.hidden = pending === 0;
+    $sheetTitle.textContent = serverDown
+      ? t("serverDown")
+      : running > 0
+        ? t("uploading", { done: done, total: tasks.length })
+        : (done === tasks.length ? t("uploadDone") : t("uploadCount", { done: done, total: tasks.length }));
 
     var html = "";
     for (var i = 0; i < tasks.length; i++) {
@@ -1875,6 +2460,7 @@ button.action svg { width: 18px; height: 18px; }
       if (task.state === "done") sub = t("done", { size: fmtSize(task.total) });
       else if (task.state === "err") sub = t("failed", { err: task.err || t("unknownError") });
       else if (task.state === "wait") sub = t("waiting", { size: fmtSize(task.total) });
+      else if (task.err) sub = task.err; // retrying: the reason beats a byte count
       else {
         sub = fmtSize(task.loaded) + " / " + fmtSize(task.total);
         if (task.speed > 0) sub += " · " + fmtSize(task.speed) + "/s";
@@ -1890,8 +2476,35 @@ button.action svg { width: 18px; height: 18px; }
     var scroll = $sheetBody.scrollTop;
     $sheetBody.innerHTML = html;
     if ($sheetBody.scrollTop !== scroll) $sheetBody.scrollTop = scroll;
+
+    // While hidden, keep a way back: the pill is the only route to progress
+    // and to the cancel button once the panel is gone.
+    var activeNow = 0;
+    for (var p = 0; p < tasks.length; p++) {
+      if (tasks[p].state === "run" || tasks[p].state === "wait") activeNow++;
+    }
+    $upPill.hidden = !sheetHidden || activeNow === 0;
+    if (!$upPill.hidden) $upPillText.textContent = t("activeUploads", { done: done, total: tasks.length });
+    if (sheetHidden) return;
     $sheet.classList.add("show");
   }
+
+  // A tab that was open before the binary was rebuilt is running a script that
+  // no longer matches the server. It cannot be fixed from the server side, so
+  // it asks periodically and reloads itself — never mid-transfer, though.
+  function checkBuild(d) {
+    if (!d || !d.build || !PAGE_BUILD) return;
+    // Opened straight from disk: the placeholder was never substituted.
+    if (PAGE_BUILD.charAt(0) === "_") return;
+    if (d.build === PAGE_BUILD) return;
+    if (uploading) return;
+    location.reload();
+  }
+
+  setInterval(function () {
+    if (uploading || document.hidden) return;
+    api("/api/info", 5000).then(checkBuild).catch(function () { /* offline */ });
+  }, 60000);
 
   // Bootstrap. Everything the first paint needs — language, read-only flag,
   // share count — is resolved before anything is rendered. Doing it after the
@@ -1905,6 +2518,7 @@ button.action svg { width: 18px; height: 18px; }
       // Adopt the host's language unless this browser already stored an
       // explicit choice.
       if (!storedLang && d.lang) lang = normalizeLang(d.lang);
+      checkBuild(d);
     })
     .catch(function () { /* keep the browser language */ })
     .then(function () {
@@ -1917,7 +2531,7 @@ button.action svg { width: 18px; height: 18px; }
     });
 
   $langBtn.addEventListener("click", function () {
-    setLang(lang === "en" ? "zh-CN" : "en", true);
+    setLang(lang === "en" ? "zh-Hans" : "en", true);
   });
 })();
 </script>
