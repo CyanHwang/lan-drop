@@ -172,10 +172,13 @@ func TestResumeUpload(t *testing.T) {
 	}
 }
 
+// Resume data lives in the staging file, never in the published one. A client
+// that claims an offset the staging file does not have must be told the truth
+// rather than allowed to write into a hole.
 func TestResumeOffsetMismatchReturns409(t *testing.T) {
 	_, base, root, share := newTestServer(t)
 
-	if err := os.WriteFile(filepath.Join(root, "partial.bin"), []byte("12345"), 0o644); err != nil {
+	if err := os.WriteFile(partPath(filepath.Join(root, "partial.bin")), []byte("12345"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -189,6 +192,26 @@ func TestResumeOffsetMismatchReturns409(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), `"size":5`) {
 		t.Fatalf("body = %s", body)
+	}
+}
+
+// A finished file with a different size must not be offered as a resume point:
+// the client would append its own bytes to the end of somebody else's file.
+func TestPublishedFileIsNotAResumePoint(t *testing.T) {
+	_, base, root, share := newTestServer(t)
+
+	if err := os.WriteFile(filepath.Join(root, "other.bin"), []byte("12345"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	resp := do(t, "GET", base+"/api/probe?share="+share+"&dir=&name=other.bin&total=9", nil, nil)
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), `"size":0`) {
+		t.Fatalf("probe = %s, want a zero resume offset", body)
+	}
+	if !strings.Contains(string(body), `"complete":false`) {
+		t.Fatalf("probe = %s, want complete:false", body)
 	}
 }
 
@@ -333,4 +356,28 @@ func TestStartRequiresShares(t *testing.T) {
 		t.Fatal("expected error when starting with no shares")
 	}
 	_ = s.Stop()
+}
+
+// The page and /api/info must agree on one build id. It is how an already-open
+// tab notices that the binary underneath it was replaced and reloads itself.
+func TestPageCarriesBuildStamp(t *testing.T) {
+	_, base, _, _ := newTestServer(t)
+
+	page := do(t, "GET", base+"/", nil, nil)
+	body, _ := io.ReadAll(page.Body)
+	page.Body.Close()
+	if bytes.Contains(body, []byte(pageBuildMarker)) {
+		t.Fatal("build marker was served unsubstituted")
+	}
+	if !bytes.Contains(body, []byte(pageBuild)) {
+		t.Fatalf("page does not carry build id %q", pageBuild)
+	}
+
+	info := do(t, "GET", base+"/api/info", nil, nil)
+	var out map[string]any
+	_ = json.NewDecoder(info.Body).Decode(&out)
+	info.Body.Close()
+	if out["build"] != pageBuild {
+		t.Fatalf("info build = %v, want %q", out["build"], pageBuild)
+	}
 }

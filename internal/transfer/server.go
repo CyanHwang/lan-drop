@@ -28,6 +28,20 @@ import (
 //go:embed mobile.html
 var mobileHTML []byte
 
+// pageBuild identifies the embedded browser UI. The page carries the same id
+// and reloads itself when the two differ. Without it a rebuilt binary keeps
+// feeding the old script to a tab that was already open, which makes every
+// server-side fix look like it did nothing at all.
+var pageBuild = func() string {
+	sum := sha256.Sum256(mobileHTML)
+	return hex.EncodeToString(sum[:6])
+}()
+
+// pageBuildMarker is replaced in the served HTML. It lives in the file rather
+// than being injected by string surgery at build time so the HTML stays valid
+// on its own when opened directly.
+const pageBuildMarker = "__PAGE_BUILD__"
+
 // Share is one directory exposed over the LAN.
 type Share struct {
 	ID   string `json:"id"`
@@ -70,6 +84,10 @@ type Progress struct {
 	Loaded    int64  `json:"loaded"`
 	Total     int64  `json:"total"`
 	Done      bool   `json:"done"`
+	// Cancelled marks a transfer that was stopped on purpose — by the browser
+	// or by shutting the service down — so the desktop can show it as
+	// interrupted instead of failed. Error still carries the reason.
+	Cancelled bool   `json:"cancelled,omitempty"`
 	Error     string `json:"error,omitempty"`
 	Speed     int64  `json:"speed"`
 	ElapsedMS int64  `json:"elapsedMs"`
@@ -127,6 +145,10 @@ type Server struct {
 	since    time.Time
 	readOnly atomic.Bool
 	lang     atomic.Value // i18n.Lang
+	// Set while Stop() tears the listener down. In-flight uploads see a read
+	// error from the closed socket, which is indistinguishable from a client
+	// hanging up unless we remember that we were the ones who closed it.
+	shuttingDown atomic.Bool
 	// Listing filters. Atomic so the desktop can flip them while the server
 	// is running without a restart; the next request picks them up.
 	showHidden   atomic.Bool
@@ -134,6 +156,18 @@ type Server struct {
 	filter       atomic.Value // filterSet
 
 	ips ipCache
+
+	// One writer per destination path, so two devices pushing the same name
+	// cannot interleave their bytes into a single file.
+	locks uploadLocks
+	// Start times per upload id, so a chunked transfer keeps one clock instead
+	// of restarting it on every request.
+	uploads uploadSessions
+	// Closes the staging-file sweeper for the current run.
+	sweepStop chan struct{}
+	// progressInterval overrides how often transfer:progress events are
+	// emitted. Zero keeps the default; tests set it to observe every tick.
+	progressInterval time.Duration
 
 	emit func(name string, data any)
 }
@@ -280,6 +314,7 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	mux.HandleFunc("POST /api/download/zip", s.handleZipDownload)
 	mux.HandleFunc("GET /api/probe", s.handleProbe)
 	mux.HandleFunc("PUT /api/upload", s.handleUpload)
+	mux.HandleFunc("POST /api/upload/cancel", s.handleUploadCancel)
 	mux.HandleFunc("POST /api/mkdir", s.handleMkdir)
 	mux.HandleFunc("DELETE /api/file", s.handleDelete)
 	mux.HandleFunc("GET /api/info", s.handleInfo)
@@ -300,6 +335,7 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	s.httpSrv = srv
 	s.since = time.Now()
 	s.readOnly.Store(opt.ReadOnly)
+	s.shuttingDown.Store(false)
 	s.showHidden.Store(opt.ShowHidden)
 	s.showDotfiles.Store(opt.ShowDotfiles)
 	s.filter.Store(ParseFilter(opt.Filter))
@@ -310,7 +346,35 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 		}
 	}()
 
+	// Staging files are hidden from the listing by design, so an abandoned
+	// upload would otherwise hold gigabytes the user cannot even see. One pass
+	// shortly after startup, then every few hours for long-running instances.
+	s.sweepStop = make(chan struct{})
+	go s.sweepParts(validated, s.sweepStop)
+
 	return s.infoLocked(), nil
+}
+
+// sweepParts reclaims staging files left behind by uploads nobody finished.
+func (s *Server) sweepParts(shares []Share, stop <-chan struct{}) {
+	// Not immediately: startup already competes for the disk with the first
+	// listing request, and nothing is on fire in the first minute.
+	select {
+	case <-stop:
+		return
+	case <-time.After(90 * time.Second):
+	}
+	for {
+		cutoff := time.Now().Add(-partTTL)
+		for _, sh := range shares {
+			removeStaleParts(sh.Path, cutoff)
+		}
+		select {
+		case <-stop:
+			return
+		case <-time.After(6 * time.Hour):
+		}
+	}
 }
 
 // Stop closes the listener. In-flight transfers are aborted.
@@ -320,6 +384,39 @@ func (s *Server) Stop() error {
 
 	if s.httpSrv == nil {
 		return nil
+	}
+	if s.sweepStop != nil {
+		close(s.sweepStop)
+		s.sweepStop = nil
+	}
+	// Set before closing so handlers woken by the closed sockets can tell this
+	// shutdown apart from a client that walked away.
+	s.shuttingDown.Store(true)
+	// Close every row that is still open. An upload waiting between chunks has
+	// no request in flight to notice the shutdown, and would otherwise keep
+	// spinning in the desktop list with a stale percentage forever.
+	lang := s.L()
+	for _, snap := range s.uploads.snapshot() {
+		sess := snap.sess
+		// Stopping is deliberate, so the staged bytes go too. A file still
+		// held open by its handler fails to delete here on Windows and is
+		// removed by that handler on its way out.
+		removePart(sess.abs)
+		s.publish("transfer:progress", Progress{
+			ID:        snap.id,
+			Name:      sess.name,
+			Dir:       sess.dir,
+			Share:     sess.share,
+			Direction: "up",
+			Loaded:    sess.loaded,
+			Total:     sess.total,
+			Done:      true,
+			Cancelled: true,
+			Error:     i18n.T(lang, i18n.ErrServerStopped, humanBytes(sess.loaded)),
+			At:        sess.start.UnixMilli(),
+			ClientIP:  sess.clientIP,
+			Client:    sess.client,
+		})
 	}
 	err := s.httpSrv.Close()
 	s.httpSrv = nil
@@ -511,15 +608,167 @@ func newID() string {
 	return hex.EncodeToString(b[:])
 }
 
+// uploadSessions remembers when a transfer started, keyed by the client's
+// upload id. Every chunk is a separate HTTP request, and the start time has to
+// survive between them: it is what makes elapsed time and speed describe the
+// whole file rather than the current 64 MB slice.
+//
+// The time comes from the server's own clock on purpose. Taking it from the
+// client would import the phone's clock skew straight into the speed figure.
+//
+// base is the byte count already on disk when the session began. A resumed
+// upload reports absolute progress but can only measure the rate of the bytes
+// it actually moved, otherwise a resume at 4 GB would claim 4 GB/s.
+type uploadSession struct {
+	start     time.Time
+	base      int64
+	cancelled bool
+	// Transfer identity, kept so a cancel that lands between two chunks can
+	// still close the row on the desktop. The upload handler only reports a
+	// final state when a request dies; in the gap between requests there is
+	// nothing to die, and the row would spin forever.
+	name     string
+	dir      string
+	share    string
+	abs      string
+	clientIP string
+	client   string
+	total    int64
+	loaded   int64
+}
+
+// uploadMeta is the static half of a transfer, captured on the first chunk.
+type uploadMeta struct {
+	name     string
+	dir      string
+	share    string
+	abs      string
+	clientIP string
+	client   string
+	total    int64
+}
+
+type uploadSessions struct {
+	mu sync.Mutex
+	m  map[string]uploadSession
+}
+
+const uploadSessionTTL = 24 * time.Hour
+
+func (u *uploadSessions) begin(id string, base int64, meta uploadMeta) uploadSession {
+	now := time.Now()
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.m == nil {
+		u.m = map[string]uploadSession{}
+	}
+	if s, ok := u.m[id]; ok {
+		// A chunk start is the cheapest reliable "bytes on disk" checkpoint.
+		s.loaded = base
+		u.m[id] = s
+		return s
+	}
+	// An abandoned upload must not hold a slot forever.
+	for k, s := range u.m {
+		if now.Sub(s.start) > uploadSessionTTL {
+			delete(u.m, k)
+		}
+	}
+	s := uploadSession{
+		start:    now,
+		base:     base,
+		loaded:   base,
+		name:     meta.name,
+		dir:      meta.dir,
+		share:    meta.share,
+		abs:      meta.abs,
+		clientIP: meta.clientIP,
+		client:   meta.client,
+		total:    meta.total,
+	}
+	u.m[id] = s
+	return s
+}
+
+// advance records how many bytes are safely on disk, so a cancellation between
+// chunks reports a truthful figure instead of the last chunk's starting point.
+func (u *uploadSessions) advance(id string, loaded int64) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if s, ok := u.m[id]; ok {
+		s.loaded = loaded
+		u.m[id] = s
+	}
+}
+
+func (u *uploadSessions) done(id string) {
+	u.mu.Lock()
+	delete(u.m, id)
+	u.mu.Unlock()
+}
+
+// cancel marks a transfer the browser asked to stop and hands back what is
+// known about it, so the caller can close the row even with nothing in flight.
+func (u *uploadSessions) cancel(id string) (uploadSession, bool) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	s, ok := u.m[id]
+	if !ok {
+		return uploadSession{}, false
+	}
+	s.cancelled = true
+	u.m[id] = s
+	return s, true
+}
+
+func (u *uploadSessions) wasCancelled(id string) bool {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.m[id].cancelled
+}
+
+// sessionSnapshot is one live transfer, copied out so callers can publish
+// without holding the sessions lock.
+type sessionSnapshot struct {
+	id   string
+	sess uploadSession
+}
+
+// snapshot copies every live session. Used when the listener goes down:
+// transfers waiting between chunks have no request to notice the shutdown.
+func (u *uploadSessions) snapshot() []sessionSnapshot {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	out := make([]sessionSnapshot, 0, len(u.m))
+	for id, s := range u.m {
+		out = append(out, sessionSnapshot{id: id, sess: s})
+	}
+	return out
+}
+
 // throttle keeps high-frequency progress events from flooding the WebView.
 type throttle struct {
 	last int64
 }
 
-func (t *throttle) allow() bool {
+// defaultProgressInterval is the minimum gap between progress events for one
+// transfer. The WebView cannot render faster than this, and a 60 MB/s upload
+// would otherwise fire thousands of events per second.
+const defaultProgressInterval = 120 * time.Millisecond
+
+// progressMs is the throttle window in milliseconds. Zero or negative means
+// no throttle, which is what tests use to observe every tick.
+func (s *Server) progressMs() int64 {
+	if s.progressInterval != 0 {
+		return s.progressInterval.Milliseconds()
+	}
+	return defaultProgressInterval.Milliseconds()
+}
+
+func (t *throttle) allow(min int64) bool {
 	now := time.Now().UnixMilli()
 	prev := atomic.LoadInt64(&t.last)
-	if now-prev < 120 {
+	if now-prev < min {
 		return false
 	}
 	return atomic.CompareAndSwapInt64(&t.last, prev, now)
@@ -549,16 +798,34 @@ type reporter struct {
 	direction string
 	total     int64
 	start     time.Time
-	clientIP  string
-	client    string
-	th        throttle
+	// base is how many bytes were already on disk when this session started.
+	// Speed counts from here, so a resumed transfer reports the rate of the
+	// bytes it moved rather than the size of the file divided by a few seconds.
+	base     int64
+	clientIP string
+	client   string
+	th       throttle
+	// cancelled is set by finishCancelled, which the upload handler calls when
+	// the stop was deliberate rather than a network failure.
+	cancelled bool
 }
 
 func (r *reporter) send(loaded int64, done bool, errMsg string) {
+	// A transfer closed on purpose — cancelled from the browser, or the
+	// service shutting down — must not be reopened by whatever the in-flight
+	// chunk is still doing. Without this the cancel event lands, the next
+	// progress tick overwrites it, and the desktop row sits at a stale
+	// percentage with nothing left to ever close it again.
+	if !done && (r.srv.shuttingDown.Load() || r.srv.uploads.wasCancelled(r.id)) {
+		return
+	}
 	elapsed := time.Since(r.start).Milliseconds()
 	var speed int64
-	if elapsed > 0 {
-		speed = loaded * 1000 / elapsed
+	// Below half a second the divisor is noise: a few hundred kilobytes in one
+	// millisecond reads as gigabytes per second. Report nothing until the
+	// average means something.
+	if elapsed > 500 && loaded > r.base {
+		speed = (loaded - r.base) * 1000 / elapsed
 	}
 	r.srv.publish("transfer:progress", Progress{
 		ID:        r.id,
@@ -569,6 +836,7 @@ func (r *reporter) send(loaded int64, done bool, errMsg string) {
 		Loaded:    loaded,
 		Total:     r.total,
 		Done:      done,
+		Cancelled: r.cancelled,
 		Error:     errMsg,
 		Speed:     speed,
 		ElapsedMS: elapsed,
@@ -579,7 +847,7 @@ func (r *reporter) send(loaded int64, done bool, errMsg string) {
 }
 
 func (r *reporter) tick(loaded int64) {
-	if r.th.allow() {
+	if r.th.allow(r.srv.progressMs()) {
 		r.send(loaded, false, "")
 	}
 }
@@ -588,9 +856,22 @@ func (r *reporter) finish(loaded int64, errMsg string) {
 	r.send(loaded, true, errMsg)
 }
 
+// finishCancelled reports a transfer that was stopped on purpose. The desktop
+// renders these in a neutral colour: they are not failures, they are decisions.
+func (r *reporter) finishCancelled(loaded int64, msg string) {
+	r.cancelled = true
+	r.finish(loaded, msg)
+}
+
 // copyStream moves src to dst in fixed-size chunks, reporting progress as it
 // goes. No buffering beyond one chunk, so a 100 GB upload costs 256 KB of RAM.
-func copyStream(dst io.Writer, src io.Reader, r *reporter) (int64, error) {
+//
+// base is the number of bytes already on disk before this request started.
+// Progress is reported as base+written, not written: a chunked upload sends
+// the file in many requests, and a reporter that counted from zero per request
+// would drag the UI back to 0% every 64 MB and report the chunk's size divided
+// by the whole transfer's duration as its speed.
+func copyStream(dst io.Writer, src io.Reader, r *reporter, base int64) (int64, error) {
 	buf := make([]byte, 256*1024)
 	var written int64
 	for {
@@ -601,7 +882,7 @@ func copyStream(dst io.Writer, src io.Reader, r *reporter) (int64, error) {
 			}
 			written += int64(n)
 			if r != nil {
-				r.tick(written)
+				r.tick(base + written)
 			}
 		}
 		if readErr == io.EOF {
