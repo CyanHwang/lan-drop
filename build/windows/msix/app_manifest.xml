@@ -10,7 +10,7 @@
   <Identity 
     Name="io.landrop.app"
     Publisher="CN=LanDrop"
-    Version="0.2.0.0"
+    Version="0.3.0.0"
     ProcessorArchitecture="x64" />
   
   <Properties>
