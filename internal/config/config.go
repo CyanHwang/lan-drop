@@ -16,7 +16,7 @@ import (
 
 // Config represents the persisted application settings.
 type Config struct {
-	// Language is "en" or "zh-CN". Empty means it has never been resolved.
+	// Language is "en" or "zh-Hans". Empty means it has never been resolved.
 	Language string `json:"language"`
 	// ShowHidden lists entries carrying the OS hidden attribute (Windows only).
 	ShowHidden bool `json:"showHidden"`

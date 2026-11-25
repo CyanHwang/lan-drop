@@ -12,8 +12,10 @@ import (
 type Lang string
 
 const (
-	EN   Lang = "en"
-	ZHCN Lang = "zh-CN"
+	EN Lang = "en"
+	// A script subtag, not a region: the catalogue is about the writing system,
+	// not about where the reader happens to live.
+	ZHCN Lang = "zh-Hans"
 )
 
 // Supported lists the languages the UI can render, in menu order.
@@ -37,6 +39,7 @@ const (
 	ErrDirNotFound       Msg = "err.dirNotFound"
 	ErrNotFolder         Msg = "err.notFolder"
 	ErrMissingPath       Msg = "err.missingPath"
+	ErrMissingId         Msg = "err.missingId"
 	ErrFileNotFound      Msg = "err.fileNotFound"
 	ErrTargetIsFolder    Msg = "err.targetIsFolder"
 	ErrInvalidName       Msg = "err.invalidName"
@@ -44,6 +47,15 @@ const (
 	ErrDeleteRoot        Msg = "err.deleteRoot"
 	ErrNotFound          Msg = "err.notFound"
 	ErrOffsetMismatch    Msg = "err.offsetMismatch"
+	ErrUploadBusy        Msg = "err.uploadBusy"
+	ErrUploadRange       Msg = "err.uploadRange"
+	ErrChunkCorrupt      Msg = "err.chunkCorrupt"
+	ErrNoSpace           Msg = "err.noSpace"
+	ErrFileChanged       Msg = "err.fileChanged"
+	ErrClientGone        Msg = "err.clientGone"
+	ErrUploadCancelled   Msg = "err.uploadCancelled"
+	ErrServerStopped     Msg = "err.serverStopped"
+	ErrFinalize          Msg = "err.finalize"
 	ErrAppNotReady       Msg = "err.appNotReady"
 	ErrClipboard         Msg = "err.clipboard"
 	ErrServiceNotRunning Msg = "err.serviceNotRunning"
@@ -102,6 +114,7 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrDirNotFound:       "folder does not exist",
 		ErrNotFolder:         "not a folder",
 		ErrMissingPath:       "missing path parameter",
+		ErrMissingId:         "missing upload id",
 		ErrFileNotFound:      "file does not exist",
 		ErrTargetIsFolder:    "target is a folder",
 		ErrInvalidName:       "invalid file name",
@@ -109,6 +122,15 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrDeleteRoot:        "refusing to delete the share root",
 		ErrNotFound:          "not found",
 		ErrOffsetMismatch:    "offset mismatch",
+		ErrUploadBusy:        "another device is already uploading this file",
+		ErrUploadRange:       "request body runs past the declared file size",
+		ErrChunkCorrupt:      "chunk failed its checksum, retrying from %s",
+		ErrNoSpace:           "not enough disk space: need %s, %s available",
+		ErrFileChanged:       "staged data belongs to a different file",
+		ErrClientGone:        "client disconnected after %s",
+		ErrUploadCancelled:   "cancelled, %s discarded",
+		ErrServerStopped:     "service stopped, %s discarded",
+		ErrFinalize:          "cannot publish the finished file: %v",
 		ErrAppNotReady:       "application is not ready",
 		ErrClipboard:         "failed to write to the clipboard",
 		ErrServiceNotRunning: "service is not running",
@@ -159,6 +181,7 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrDirNotFound:       "目录不存在",
 		ErrNotFolder:         "不是文件夹",
 		ErrMissingPath:       "缺少 path 参数",
+		ErrMissingId:         "缺少 upload id",
 		ErrFileNotFound:      "文件不存在",
 		ErrTargetIsFolder:    "目标是文件夹",
 		ErrInvalidName:       "文件名无效",
@@ -166,6 +189,15 @@ var catalogue = map[Lang]map[Msg]string{
 		ErrDeleteRoot:        "拒绝删除共享根目录",
 		ErrNotFound:          "不存在",
 		ErrOffsetMismatch:    "偏移量不匹配",
+		ErrUploadBusy:        "另一台设备正在上传这个文件",
+		ErrUploadRange:       "请求体超出了声明的文件大小",
+		ErrChunkCorrupt:      "分片校验失败，从 %s 重传",
+		ErrNoSpace:           "磁盘空间不足：需要 %s，可用 %s",
+		ErrFileChanged:       "暂存数据属于另一个文件",
+		ErrClientGone:        "客户端已断开（已写入 %s）",
+		ErrUploadCancelled:   "已取消（已丢弃 %s）",
+		ErrServerStopped:     "服务已停止（已丢弃 %s）",
+		ErrFinalize:          "无法落盘：%v",
 		ErrAppNotReady:       "应用未就绪",
 		ErrClipboard:         "写入剪贴板失败",
 		ErrServiceNotRunning: "服务未启动",
@@ -235,8 +267,8 @@ func Normalize(tag string) (Lang, bool) {
 
 	switch {
 	case strings.HasPrefix(t, "zh"):
-		// Traditional Chinese is closer to Simplified than to English for the
-		// handful of strings this app ships.
+		// Every Chinese tag maps to the single Chinese catalogue: a reader of
+		// the other script is far better served by it than by English.
 		return ZHCN, true
 	case strings.HasPrefix(t, "en"):
 		return EN, true
@@ -244,12 +276,17 @@ func Normalize(tag string) (Lang, bool) {
 	return "", false
 }
 
-// Resolve turns a stored value into a concrete language. Anything missing or
-// unrecognised falls back to the host OS language, which is what a first run
-// or a hand-edited config looks like.
+// Resolve turns a stored preference into a concrete language. Only the
+// canonical tags are honoured — Normalize is deliberately more forgiving than
+// this, because it has to read whatever locale string the OS hands over, while
+// a stored preference should be exactly what this app writes. Anything else
+// falls back to the host OS, which is what a first run looks like.
 func Resolve(pref string) Lang {
-	if l, ok := Normalize(pref); ok {
-		return l
+	switch strings.ToLower(strings.TrimSpace(pref)) {
+	case string(EN):
+		return EN
+	case strings.ToLower(string(ZHCN)):
+		return ZHCN
 	}
 	return Detect()
 }

@@ -29,14 +29,14 @@ func TestNormalize(t *testing.T) {
 }
 
 func TestResolveFallsBackToSystem(t *testing.T) {
-	// An explicit preference always wins.
-	if got := Resolve("zh-CN"); got != ZHCN {
-		t.Errorf("Resolve(zh-CN) = %q", got)
+	// A stored canonical tag always wins.
+	if got := Resolve("zh-Hans"); got != ZHCN {
+		t.Errorf("Resolve(zh-Hans) = %q", got)
 	}
 	if got := Resolve("en"); got != EN {
 		t.Errorf("Resolve(en) = %q", got)
 	}
-	// Anything else (including "auto") resolves to a supported language.
+	// Anything else resolves to a supported language via the host OS.
 	for _, pref := range []string{"auto", "", "klingon"} {
 		if got := Resolve(pref); got != EN && got != ZHCN {
 			t.Errorf("Resolve(%q) = %q, want a supported language", pref, got)
@@ -64,7 +64,7 @@ func TestCatalogueIsComplete(t *testing.T) {
 	en, zh := catalogue[EN], catalogue[ZHCN]
 	for k := range en {
 		if _, ok := zh[k]; !ok {
-			t.Errorf("key %q is missing from zh-CN", k)
+			t.Errorf("key %q is missing from %s", k, ZHCN)
 		}
 	}
 	for k := range zh {

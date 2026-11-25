@@ -22,7 +22,7 @@ func writeTemp(t *testing.T, body string) string {
 func TestLoadParsesGeneralAndShares(t *testing.T) {
 	p := writeTemp(t, `; hand-written comment
 [general]
-language = zh-CN
+language = zh-Hans
 
 [share_1]
 name = Photos
@@ -34,8 +34,8 @@ path = /data/docs
 
 	cfg := loadFile(p)
 
-	if cfg.Language != "zh-CN" {
-		t.Errorf("language = %q, want zh-CN", cfg.Language)
+	if cfg.Language != "zh-Hans" {
+		t.Errorf("language = %q, want zh-Hans", cfg.Language)
 	}
 	if len(cfg.Shares) != 2 {
 		t.Fatalf("shares = %d, want 2", len(cfg.Shares))
@@ -244,7 +244,7 @@ func TestLegacyINIMigration(t *testing.T) {
 		t.Fatalf("old config should be preserved: %v", err)
 	}
 
-	if err := os.WriteFile("config.ini", []byte("[general]\nlanguage = zh-CN\n"), 0o644); err != nil {
+	if err := os.WriteFile("config.ini", []byte("[general]\nlanguage = zh-Hans\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if again := Load(); again.Language != "en" {
