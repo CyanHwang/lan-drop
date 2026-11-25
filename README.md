@@ -29,7 +29,7 @@ Point LanDrop at a folder and start the service. The other end opens a browser a
 | **Multiple folders** | Every shared folder appears under one virtual root, browsable like a normal file tree |
 | **Streaming transfers** | Constant 256 KB of memory. A 100 GB file costs the same as a 1 MB one |
 | **Batch download** | Select files and folders with checkboxes and download them as one zip, streamed uncompressed for LAN speed |
-| **Resumable** | Uploads continue via `X-Offset`; single-file downloads use standard HTTP `Range`. Survives a dropped connection |
+| **Resumable** | Uploads run in 64 MB chunks, staged in `.part` and renamed only after the length checks out; downloads use standard HTTP `Range` |
 | **Live progress** | The desktop window shows direction, speed, elapsed time and the peer's IP for every transfer |
 | **Read-only mode** | Serve files without letting the network write to them |
 | **Two languages** | English and Simplified Chinese, detected on first launch and switchable at runtime |
@@ -134,7 +134,7 @@ Settings live in `lan-drop.ini` **next to the executable**, so the whole thing i
 ; LanDrop configuration file (portable)
 
 [general]
-language = en            ; en | zh-CN
+language = en            ; en | zh-Hans
 show_hidden = false      ; include entries with the OS hidden attribute
 show_dotfiles = false    ; include entries whose name starts with a dot
 filter = *.tmp, node_modules   ; hide these from the listing
@@ -189,13 +189,24 @@ The browser page and every endpoint share one port. No extra services.
 | GET | `/api/list?share=&dir=` | Directory listing. Empty `share` returns the virtual root |
 | GET | `/api/download?share=&path=` | Single-file download, supports `Range` |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | Batch zip. `paths` repeats; POST accepts a form body for large selections |
-| GET | `/api/probe?share=&dir=&name=` | Bytes already received for a given file |
-| PUT | `/api/upload?share=&dir=&name=` | Streaming upload. `X-Offset` sets the resume point |
+| GET | `/api/probe?share=&dir=&name=&total=` | Staged bytes for a file; with `total` it also reports `complete` |
+| PUT | `/api/upload?share=&dir=&name=` | Chunked upload. `X-Offset` sets the resume point, `X-Total-Size` declares the file size, `X-Chunk-CRC32` carries the chunk checksum |
+| POST | `/api/upload/cancel?id=` | Marks an upload as cancelled on purpose, deletes its staged data, and tells the desktop to show it as cancelled rather than disconnected |
 | POST | `/api/mkdir?share=&dir=&name=` | Create a folder |
 | DELETE | `/api/file?share=&path=` | Delete a file or an empty folder |
 | GET | `/api/info` | Status, share count, read-only flag, language |
 
-**Resume contract**: `X-Offset` must equal the exact byte count on disk. Otherwise the server returns `409` with the real size and the client restarts from there.
+**Upload contract**: bytes land in `<name>.part` first and are `fsync`ed and renamed onto the real name only when the written total matches `X-Total-Size`. A dropped transfer therefore never leaves a half-written file under the real name, and never shows one in the listing. `X-Offset` must equal the staged byte count, otherwise the server returns `409` with the real size.
+
+**Cross-file guard**: the client sends `X-File-Size` and `X-File-Mtime` as a fingerprint. When the staged bytes belong to a different file that happened to share the name, the server answers `409` with `reset: true` and drops them instead of splicing two files together.
+
+**Content check**: the browser computes a CRC32 over each chunk and sends it as `X-Chunk-CRC32`; the server hashes while writing, and on a mismatch rolls the staging file back to the chunk boundary and answers `422` so the client resends that chunk. TCP's 16-bit checksum is usually computed by the network card and misses more than people assume.
+
+**Keep or discard**: an unexpected failure — a dropped link, a client that vanishes — keeps the `.part` file so picking the same file again resumes. Cancelling, and stopping the service, are deliberate decisions: the staged data is deleted with them instead of sitting invisibly on the disk.
+
+**Concurrency and space**: one writer per destination path — a second device gets `409` with `busy: true`. Free space is checked before the first byte, so a file that cannot fit fails with `507` immediately rather than at 99%.
+
+**Chunks**: the browser sends 64 MB chunks, so a failure costs at most one chunk. Forty-five seconds without progress means the socket is dead; it reconnects and resumes, and never gives up while bytes keep moving.
 
 **Batch downloads** are stored uncompressed (`zip.Store`) — on a LAN the link is
 the bottleneck, and deflating video or archives just burns CPU. Because the zip
@@ -203,7 +214,7 @@ is streamed, it has no `Content-Length`: the browser cannot show a percentage
 and a dropped transfer restarts from zero. Single-file downloads keep their
 `Range` support, so grab one large file directly rather than through the zip.
 
-The browser client decides where to resume by asking how many bytes the server already holds for that *file name*. Picking a different file with the same name therefore continues from the wrong offset — there is no content hash to tell them apart.
+The browser client decides where to resume by asking how many bytes are staged for that *file name*. A fingerprint (size plus modification time) rules out the common "same name, different file" case; two different files with an identical size and mtime are still indistinguishable, and telling them apart would mean hashing gigabytes on both ends.
 
 There is no API version prefix and no CORS headers — the endpoints exist for the embedded page, not for third parties.
 
