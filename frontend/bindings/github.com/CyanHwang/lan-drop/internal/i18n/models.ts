@@ -11,5 +11,5 @@ export enum Lang {
     $zero = "",
 
     EN = "en",
-    ZHCN = "zh-CN",
+    ZHCN = "zh-Hans",
 };

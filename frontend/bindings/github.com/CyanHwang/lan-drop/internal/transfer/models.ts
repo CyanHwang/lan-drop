@@ -25,6 +25,13 @@ export interface Progress {
     "loaded": number;
     "total": number;
     "done": boolean;
+
+    /**
+     * Cancelled marks a transfer that was stopped on purpose — by the browser
+     * or by shutting the service down — so the desktop can show it as
+     * interrupted instead of failed. Error still carries the reason.
+     */
+    "cancelled"?: boolean;
     "error"?: string;
     "speed": number;
     "elapsedMs": number;

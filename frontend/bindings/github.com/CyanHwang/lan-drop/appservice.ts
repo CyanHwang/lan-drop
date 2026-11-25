@@ -47,7 +47,7 @@ export function L(): $CancellablePromise<i18n$0.Lang> {
 }
 
 /**
- * Language returns the active UI language tag ("en" or "zh-CN").
+ * Language returns the active UI language tag ("en" or "zh-Hans").
  */
 export function Language(): $CancellablePromise<string> {
     return $Call.ByID(537396504);

@@ -127,7 +127,7 @@ func (a *AppService) SetViewOptions(o ViewOptions) (ViewOptions, error) {
 	return o, nil
 }
 
-// Language returns the active UI language tag ("en" or "zh-CN").
+// Language returns the active UI language tag ("en" or "zh-Hans").
 func (a *AppService) Language() string {
 	return string(a.L())
 }

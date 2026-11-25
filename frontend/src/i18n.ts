@@ -2,9 +2,9 @@
 // internal/i18n; the two must stay in sync, because error messages arrive from
 // Go already localised while everything else is rendered here.
 
-export type Lang = 'en' | 'zh-CN'
+export type Lang = 'en' | 'zh-Hans'
 
-export const LANGS: Lang[] = ['en', 'zh-CN']
+export const LANGS: Lang[] = ['en', 'zh-Hans']
 
 type Dict = Record<string, string>
 
@@ -57,6 +57,7 @@ const en: Dict = {
   'activity.emptyTitle': 'No transfers yet',
   'activity.empty': 'When a device downloads or uploads a file, it shows up here in real time.',
   'activity.failed': 'Failed',
+  'activity.cancelled': 'Cancelled',
   'activity.download': 'Download',
   'activity.upload': 'Upload',
   'activity.clientIp': 'Client address',
@@ -115,6 +116,7 @@ const zh: Dict = {
   'activity.emptyTitle': '还没有传输记录',
   'activity.empty': '其它设备下载或上传文件时，会实时显示在这里。',
   'activity.failed': '失败',
+  'activity.cancelled': '已取消',
   'activity.download': '下载',
   'activity.upload': '上传',
   'activity.clientIp': '客户端地址',
@@ -126,7 +128,7 @@ const zh: Dict = {
   'lang.switchTo': '切换到英文',
 }
 
-const dicts: Record<Lang, Dict> = { en, 'zh-CN': zh }
+const dicts: Record<Lang, Dict> = { en, 'zh-Hans': zh }
 
 export function translate(
   lang: Lang,
@@ -152,5 +154,5 @@ export function makeT(lang: Lang): TFunc {
 /** Maps an OS locale ("zh-Hans-CN") onto a supported UI language. */
 export function normalizeLang(tag: string | undefined | null): Lang {
   const t = (tag ?? '').toLowerCase()
-  return t.startsWith('zh') ? 'zh-CN' : 'en'
+  return t.startsWith('zh') ? 'zh-Hans' : 'en'
 }

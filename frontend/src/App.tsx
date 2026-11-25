@@ -34,6 +34,7 @@ type Progress = {
   loaded: number
   total: number
   done: boolean
+  cancelled?: boolean
   error?: string
   speed: number
   elapsedMs: number
@@ -180,7 +181,7 @@ const ICO_POWER = (
 const RING_R = 15
 const RING_C = 2 * Math.PI * RING_R
 
-type ActState = 'running' | 'done' | 'failed'
+type ActState = 'running' | 'done' | 'failed' | 'cancelled'
 
 function ProgressRing({ pct, state, down }: { pct: number; state: ActState; down: boolean }) {
   const shown = state === 'running' ? pct : 100
@@ -230,6 +231,12 @@ export default function App() {
   const [lang, setLang] = useState<Lang>('en')
 
   const t = useMemo(() => makeT(lang), [lang])
+
+  // index.html ships a fixed lang attribute; keep it in step with the UI so
+  // screen readers, spell checkers and font fallback see the real language.
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
 
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const qrHostRef = useRef<HTMLDivElement | null>(null)
@@ -422,7 +429,7 @@ export default function App() {
   }, [])
 
   const toggleLang = useCallback(() => {
-    void changeLang(lang === 'en' ? 'zh-CN' : 'en')
+    void changeLang(lang === 'en' ? 'zh-Hans' : 'en')
   }, [lang, changeLang])
 
   const active = items.filter((x) => !x.done).length
@@ -655,14 +662,24 @@ export default function App() {
             ) : (
               items.map((x) => {
                 const pct = x.total > 0 ? Math.min(100, (x.loaded / x.total) * 100) : 0
-                const state = x.done ? (x.error ? 'failed' : 'done') : 'running'
+                // A cancellation is a decision, not a failure: it gets its own
+                // neutral state so a stopped transfer never looks like a fault.
+                const state: ActState = x.done
+                  ? x.cancelled
+                    ? 'cancelled'
+                    : x.error
+                      ? 'failed'
+                      : 'done'
+                  : 'running'
                 const cls = `act ${state} ${x.direction === 'down' ? 'down' : 'up'}`
                 const where = [x.share, x.dir].filter(Boolean).join(' / ')
-                const primary = x.error
-                  ? t('activity.failed')
-                  : x.done
-                    ? fmtSize(x.total || x.loaded)
-                    : `${Math.round(pct)}%`
+                const primary = x.cancelled
+                  ? t('activity.cancelled')
+                  : x.error
+                    ? t('activity.failed')
+                    : x.done
+                      ? fmtSize(x.total || x.loaded)
+                      : `${Math.round(pct)}%`
                 const secondary = x.error ? x.error : x.done ? fmtElapsed(x.elapsedMs, t) : fmtSpeed(x.speed)
                 return (
                   <div className={cls} key={x.id}>

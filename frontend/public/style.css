@@ -1255,9 +1255,19 @@ button:disabled {
   stroke: var(--err);
 }
 
+/* Cancelled: stopped on purpose, so muted rather than alarming. */
+.ring.cancelled .ring-value {
+  stroke: var(--muted);
+}
+
+.ring.cancelled .ring-ico {
+  color: var(--muted);
+}
+
 /* Finished rings are a quiet state hint, not a progress indicator. */
 .ring.done .ring-value,
-.ring.failed .ring-value {
+.ring.failed .ring-value,
+.ring.cancelled .ring-value {
   opacity: 0.35;
 }
 
@@ -1323,6 +1333,10 @@ button:disabled {
   color: var(--err);
 }
 
+.act.cancelled .act-kind {
+  color: var(--muted);
+}
+
 .act-dir {
   font-size: 11px;
   color: var(--muted);
@@ -1368,6 +1382,10 @@ button:disabled {
 
 .act.failed .act-stat strong {
   color: var(--err);
+}
+
+.act.cancelled .act-stat strong {
+  color: var(--muted);
 }
 
 /* Peer details sit on their own line, aligned under the file name. */
