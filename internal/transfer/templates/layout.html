@@ -67,7 +67,6 @@
 
 <div class="row-menu" id="rowMenu" role="menu" hidden>
   <button id="menuView" type="button" role="menuitem">{{template "icoEye"}}<span>{{.View}}</span></button>
-  <button id="menuOpen" type="button" role="menuitem">{{template "icoDir"}}<span>{{.OpenFolder}}</span></button>
   <button id="menuDownload" type="button" role="menuitem">{{template "icoDownload"}}<span>{{.Download}}</span></button>
   {{if .CanWrite}}<button id="menuDelete" class="danger" type="button" role="menuitem">{{template "icoDelete"}}<span>{{.Delete}}</span></button>{{end}}
 </div>

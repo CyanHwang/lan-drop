@@ -173,7 +173,6 @@ type pageData struct {
 	Delete       string
 	More         string
 	View         string
-	OpenFolder   string
 	Close        string
 	ZoomIn       string
 	ZoomOut      string
@@ -352,7 +351,6 @@ func newPage(lang i18n.Lang, r *http.Request) *pageData {
 		Delete:       i18n.T(lang, i18n.WebDelete),
 		More:         i18n.T(lang, i18n.WebMore),
 		View:         i18n.T(lang, i18n.WebView),
-		OpenFolder:   i18n.T(lang, i18n.WebOpenFolder),
 		Close:        i18n.T(lang, i18n.WebClose),
 		ZoomIn:       i18n.T(lang, i18n.WebZoomIn),
 		ZoomOut:      i18n.T(lang, i18n.WebZoomOut),

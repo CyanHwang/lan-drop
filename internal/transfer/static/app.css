@@ -1035,3 +1035,109 @@ button.action svg { width: 18px; height: 18px; }
   font-size: 12px;
   margin: 0 0 14px;
 }
+
+/* ---------- preview polish ---------- */
+
+/* A viewable file's name is a real button now. It must keep the exact
+   geometry of the <span> it replaced or the row shifts when you click it. */
+.meta.file-view {
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  padding: 11px 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.meta.file-view:hover .name { color: var(--accent); }
+.meta.file-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The overlay sits over the listing rather than replacing it wholesale. */
+.viewer {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: fade-in .18s ease both;
+}
+.viewer-bar {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.viewer-close { width: 34px; height: 34px; border-radius: 50%; }
+.viewer-tools button { border-radius: 50%; }
+
+/* Flex gives predictable centring for document cards. Images are absolutely
+   positioned at the stage origin: fitImage computes translate/scale from 0,0,
+   and grid centring used to add a second, invisible offset — the reason a
+   zoomed image sat too far to the right. */
+.viewer-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewer-stage > img {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.viewer-doc {
+  width: min(100%, 900px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  animation: fade-in .2s ease both;
+}
+/* Spreadsheets are data, not pages: use every pixel the viewport has. */
+.viewer-doc.spreadsheet {
+  width: 100%;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 18px 20px 60px;
+}
+/* A Word-like page: generous margins, normal paragraph rhythm. */
+.viewer-doc.word {
+  width: min(100%, 860px);
+  padding: 46px 56px 80px;
+  line-height: 1.6;
+}
+.viewer-doc.word p { margin: 0 0 .75em; }
+.viewer-doc.word h1, .viewer-doc.word h2, .viewer-doc.word h3 {
+  margin: 1.2em 0 .5em;
+}
+.viewer-doc.word table { width: 100%; }
+.viewer-doc.word .docx-preview { max-width: 100%; }
+
+@media (max-width: 620px) {
+  .viewer-doc.word { padding: 24px 18px 60px; }
+  .viewer-tools button { width: 30px; height: 30px; }
+}
+
+/* docx-preview injects its own stylesheet after ours. Its demo wrapper is a
+   grey stage with a shadowed page in the middle; that reads as a broken page
+   inside our own document card, so flatten it back into the card. */
+.viewer-doc.word .docx-preview-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+  align-items: stretch !important;
+}
+.viewer-doc.word section.docx-preview {
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+.viewer-doc.word section.docx-preview > article { padding: 0 !important; }
+
+.viewer-doc.spreadsheet table { display: table; width: 100%; }
+.viewer-doc.spreadsheet tr:first-child td {
+  background: var(--surface-2);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+}

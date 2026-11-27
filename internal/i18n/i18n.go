@@ -132,7 +132,6 @@ const (
 	WebDelete        Msg = "web.delete"
 	WebMore          Msg = "web.more"
 	WebView          Msg = "web.view"
-	WebOpenFolder    Msg = "web.openFolder"
 	WebReadOnly      Msg = "web.readOnly"
 	WebNotConfigured Msg = "web.notConfigured"
 	WebShareCount    Msg = "web.shareCount"
@@ -284,7 +283,6 @@ var catalogue = map[Lang]map[Msg]string{
 		WebDelete:        "Delete",
 		WebMore:          "More actions",
 		WebView:          "View",
-		WebOpenFolder:    "Open folder",
 		WebReadOnly:      "read-only",
 		WebNotConfigured: "Not configured",
 		WebShareCount:    "%d shared folder(s)",
@@ -434,7 +432,6 @@ var catalogue = map[Lang]map[Msg]string{
 		WebDelete:        "删除",
 		WebMore:          "更多操作",
 		WebView:          "查看",
-		WebOpenFolder:    "打开文件夹",
 		WebReadOnly:      "只读",
 		WebNotConfigured: "未配置",
 		WebShareCount:    "%d 个共享目录",

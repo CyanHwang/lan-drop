@@ -44,6 +44,9 @@ func TestPageUsesRowMenu(t *testing.T) {
 			t.Fatalf("page is missing #%s", id)
 		}
 	}
+	if strings.Contains(body, `id="menuOpen"`) {
+		t.Fatal("folder menu still carries an open action")
+	}
 }
 
 // The server decides which rows get a "view" item. The browser never has to
@@ -65,6 +68,13 @@ func TestPageMarksViewableFiles(t *testing.T) {
 	}
 	if tag := rowTag(body, "plain.txt"); !strings.Contains(tag, `data-view="0"`) {
 		t.Fatalf("plain.txt should not be viewable: %s", tag)
+	}
+	// The file name itself is the second way into the viewer.
+	if !strings.Contains(body, `data-view-open="note.md"`) && !strings.Contains(body, `data-view-open="notes.md"`) {
+		t.Fatal("viewable file name is not clickable")
+	}
+	if strings.Contains(body, `data-view-open="plain.txt"`) {
+		t.Fatal("plain.txt name should not open the viewer")
 	}
 	if tag := rowTag(body, "photo.jpg"); !strings.Contains(tag, "data-created=") || !strings.Contains(tag, "data-modified=") {
 		t.Fatalf("viewer metadata missing from row: %s", tag)
@@ -106,7 +116,7 @@ func TestInlineDownload(t *testing.T) {
 // Viewer libraries are embedded and immutable, like the stylesheet and script.
 func TestVendorAssetsAreServed(t *testing.T) {
 	_, base, _, _ := newTestServer(t)
-	for _, name := range []string{"marked.min.js", "purify.min.js", "mammoth.browser.min.js", "xlsx.mini.min.js"} {
+	for _, name := range []string{"marked.min.js", "purify.min.js", "docx-preview.min.js", "jszip.min.js", "xlsx.mini.min.js"} {
 		resp := do(t, "GET", base+"/static/vendor/"+name, nil, nil)
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()

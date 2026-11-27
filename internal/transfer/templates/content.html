@@ -24,6 +24,8 @@
       </span>
       {{if .IsDir}}
       <a class="meta" href="{{.Href}}"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></a>
+      {{else if .Viewable}}
+      <button class="meta file-view" type="button" data-view-open="{{.Rel}}" title="{{$.View}}"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></button>
       {{else}}
       <span class="meta"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></span>
       {{end}}

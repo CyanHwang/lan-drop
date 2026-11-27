@@ -210,6 +210,16 @@
   }
 
   $main.addEventListener("click", function (ev) {
+    // A viewable file's name is a button: tapping it opens the same preview
+    // as the menu item, without hunting for the three dots.
+    var viewOpen = ev.target.closest("button[data-view-open]");
+    if (viewOpen) {
+      ev.stopPropagation();
+      closeRowMenu();
+      openViewer(viewOpen.getAttribute("data-view-open"));
+      return;
+    }
+
     // The three-dot trigger is the only exposed action on a row now.
     var more = ev.target.closest("button[data-more]");
     if (more) {
@@ -266,7 +276,6 @@
 
   var $rowMenu = document.getElementById("rowMenu");
   var $menuView = document.getElementById("menuView");
-  var $menuOpen = document.getElementById("menuOpen");
   var $menuDownload = document.getElementById("menuDownload");
   var $menuDelete = document.getElementById("menuDelete");
   var menuRow = null;
@@ -276,8 +285,9 @@
     menuRow = btn.closest("li");
     if (!menuRow) return;
     var isDir = menuRow.getAttribute("data-dir") === "1";
-    $menuView.hidden = menuRow.getAttribute("data-view") !== "1";
-    $menuOpen.hidden = !isDir;
+    // A folder keeps one action only: delete. There is nothing to download
+    // and "open" is already the folder name itself.
+    $menuView.hidden = isDir || menuRow.getAttribute("data-view") !== "1";
     $menuDownload.hidden = isDir;
     if ($menuDelete) $menuDelete.hidden = readOnly;
     $rowMenu.hidden = false;
@@ -324,13 +334,6 @@
     var rel = currentRel();
     closeRowMenu();
     if (rel) openViewer(rel);
-  });
-
-  $menuOpen.addEventListener("click", function () {
-    var link = menuRow && menuRow.querySelector("a.meta");
-    var href = link ? link.getAttribute("href") : "";
-    closeRowMenu();
-    if (href) location.href = href;
   });
 
   $menuDownload.addEventListener("click", function () {
@@ -422,6 +425,7 @@
     $viewerDoc.hidden = true;
     $viewerFrame.hidden = true;
     $viewerTools.hidden = true;
+    $viewerDoc.className = "viewer-doc";
     $viewerImg.removeAttribute("src");
     $viewerFrame.removeAttribute("src");
     drag = null;
@@ -588,21 +592,31 @@
 
   async function showDocx(rel, seq) {
     viewerMode = "doc";
+    // docx-preview keeps the original paragraph and table layout far better
+    // than a semantic converter, and injects its own stylesheet.
+    $viewerDoc.className = "viewer-doc word";
     $viewerDoc.hidden = false;
     $viewerDoc.innerHTML = '<div class="viewer-note">' + esc(t("previewLoading")) + "</div>";
     try {
-      await Promise.all([
-        loadScript(vendorURL("mammoth.browser.min.js")),
-        loadScript(vendorURL("purify.min.js")),
-      ]);
+      // docx-preview's UMD build captures the JSZip global as it evaluates,
+      // so this order is not cosmetic: loading them in parallel leaves it
+      // holding undefined and renderAsync dies on .loadAsync().
+      await loadScript(vendorURL("jszip.min.js"));
+      await loadScript(vendorURL("docx-preview.min.js"));
       if (seq !== viewSeq) return;
       var res = await fetch(fileURL(rel, true));
       if (!res.ok) throw new Error("HTTP " + res.status);
       var buf = await res.arrayBuffer();
       if (seq !== viewSeq) return;
-      var out = await window.mammoth.convertToHtml({ arrayBuffer: buf });
-      if (seq !== viewSeq) return;
-      $viewerDoc.innerHTML = window.DOMPurify.sanitize(out.value);
+      $viewerDoc.innerHTML = "";
+      await window.docx.renderAsync(buf, $viewerDoc, null, {
+        className: "docx-preview",
+        inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: true,
+        ignoreFonts: false,
+        breakPages: false,
+      });
     } catch (e) {
       if (seq === viewSeq) viewerNote(t("previewLibFail"));
     }
@@ -610,6 +624,7 @@
 
   async function showSheet(rel, seq) {
     viewerMode = "doc";
+    $viewerDoc.className = "viewer-doc spreadsheet";
     $viewerDoc.hidden = false;
     $viewerDoc.innerHTML = '<div class="viewer-note">' + esc(t("previewLoading")) + "</div>";
     try {
