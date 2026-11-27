@@ -64,8 +64,8 @@ func TestThumbnailsOffByDefault(t *testing.T) {
 	writeTestJPEG(t, filepath.Join(root, "photo.jpg"), 200, 120)
 
 	_, body := getPage(t, base+"/s/"+share+"/", nil)
-	if strings.Contains(body, "/api/thumb?") {
-		t.Fatal("page offers previews while the switch is off")
+	if strings.Contains(body, `src="/api/thumb?`) {
+		t.Fatal("listing shows automatic previews while the switch is off")
 	}
 
 	resp := do(t, "GET", base+"/api/thumb?share="+share+"&path=photo.jpg", nil, nil)
@@ -223,9 +223,41 @@ func TestPreviewableFormats(t *testing.T) {
 func TestThumbKeyChangesWithMtime(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "photo.jpg")
 	st := time.Unix(1_700_000_000, 0)
-	first := thumbKey(path, 4096, st)
-	second := thumbKey(path, 4096, st.Add(time.Second))
+	first := thumbKey(path, 4096, st, "128")
+	second := thumbKey(path, 4096, st.Add(time.Second), "128")
 	if first == second {
 		t.Fatal("mtime is not part of the cache key")
+	}
+}
+
+// A full-screen preview is an explicit click, not an automatic thumbnail, so
+// it must still work while the listing switch is off. The two sizes use
+// different cache entries.
+func TestLargePreviewWorksWithThumbnailsOff(t *testing.T) {
+	isolateThumbCache(t)
+	_, base, root, share := newTestServer(t)
+	writeTestJPEG(t, filepath.Join(root, "photo.jpg"), 600, 400)
+
+	small := do(t, "GET", base+"/api/thumb?share="+share+"&path=photo.jpg", nil, nil)
+	small.Body.Close()
+	if small.StatusCode != 404 {
+		t.Fatalf("automatic thumbnail off -> %d, want 404", small.StatusCode)
+	}
+
+	large := do(t, "GET", base+"/api/thumb?share="+share+"&path=photo.jpg&size=large", nil, nil)
+	defer large.Body.Close()
+	if large.StatusCode != 200 {
+		t.Fatalf("explicit large preview -> %d", large.StatusCode)
+	}
+	data, err := io.ReadAll(large.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := jpeg.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("not a JPEG: %v", err)
+	}
+	if img.Bounds().Dx() != viewerSize {
+		t.Fatalf("preview is %d px, want %d", img.Bounds().Dx(), viewerSize)
 	}
 }

@@ -455,7 +455,10 @@
     var seq = ++viewSeq;
     var ext = name.split(".").pop().toLowerCase();
 
-    if (isImageExt(ext)) return showViewerImage(rel, seq);
+    if (isImageExt(ext)) {
+      var rendered = row ? row.getAttribute("data-viewer") : "";
+      return showViewerImage(rel, seq, rendered);
+    }
     if (isVideoExtJS(ext)) return viewerNote(t("videoTodo"));
     if (ext === "md" || ext === "markdown") return showMarkdown(rel, seq);
     if (ext === "pdf") {
@@ -477,15 +480,16 @@
     return ["mp4", "m4v", "mov", "mkv", "webm", "avi", "wmv", "flv", "mpg", "mpeg", "3gp"].indexOf(ext) >= 0;
   }
 
-  function showViewerImage(rel, seq) {
+  function showViewerImage(rel, seq, rendered) {
     viewerMode = "image";
     $viewerImg.hidden = false;
     $viewerTools.hidden = false;
     $viewerImg.onload = function () { if (seq === viewSeq) fitImage(); };
     $viewerImg.onerror = function () { if (seq === viewSeq) viewerNote(t("previewFailed")); };
-    // The full file is used here, not the 128 px thumbnail: pan and zoom need
-    // the detail, and this is one image the user deliberately opened.
-    $viewerImg.src = fileURL(rel, true);
+    // A server-rendered 1600 px JPEG when the browser cannot display the
+    // original format (HEIC, AVIF) or when the original is needlessly huge;
+    // otherwise the raw file through the inline download endpoint.
+    $viewerImg.src = rendered || fileURL(rel, true);
   }
 
   function fitImage() {

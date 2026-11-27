@@ -40,6 +40,10 @@ const (
 	// thumbSize is the edge of the generated square. The icon slot is 38 CSS
 	// px, which is 114 device px on a 3x phone; 128 leaves a little headroom.
 	thumbSize = 128
+	// viewerSize is the longest edge of a full-screen preview. The browser
+	// cannot display HEIC/AVIF at all, and a 12 MP original is a poor fit for
+	// a phone even when it can, so the viewer gets its own rendition.
+	viewerSize = 1600
 	// thumbQuality is deliberately mid-range: at this size the difference is
 	// invisible and the file stays around 4 KB.
 	thumbQuality = 80
@@ -143,10 +147,10 @@ func PurgeThumbCache() (int64, error) {
 // coarse-grained (FAT) filesystems can produce. The failure mode is a stale
 // 38 px icon until the file is touched again, which is why it is documented
 // rather than solved with a content hash that would cost a read per row.
-func thumbKey(abs string, size int64, mtime time.Time) string {
+func thumbKey(abs string, size int64, mtime time.Time, variant string) string {
 	sum := sha256.Sum256([]byte(strings.ToLower(abs)))
 	return hex.EncodeToString(sum[:8]) + "-" + strconv.FormatInt(size, 10) + "-" +
-		strconv.FormatInt(mtime.UnixNano(), 10)
+		strconv.FormatInt(mtime.UnixNano(), 10) + "-" + variant
 }
 
 // thumbCache is two tiers: a small LRU in memory for the rows on screen, and
@@ -316,11 +320,14 @@ func isVideoName(name string) bool {
 // so a page rendered a moment before the file changed can never poison the
 // cache with the wrong bytes under the right name.
 func (s *Server) handleThumb(w http.ResponseWriter, r *http.Request) {
-	if !s.thumbsOn.Load() {
+	q := r.URL.Query()
+	large := q.Get("size") == "large"
+	// The listing switch controls automatic 128 px thumbnails. A full-screen
+	// preview is an explicit click and still works when it is off.
+	if !s.thumbsOn.Load() && !large {
 		http.NotFound(w, r)
 		return
 	}
-	q := r.URL.Query()
 	rel := strings.Trim(q.Get("path"), "/")
 	if rel == "" {
 		http.NotFound(w, r)
@@ -338,7 +345,11 @@ func (s *Server) handleThumb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := thumbKey(abs, st.Size(), st.ModTime())
+	edge := thumbSize
+	if large {
+		edge = viewerSize
+	}
+	key := thumbKey(abs, st.Size(), st.ModTime(), strconv.Itoa(edge))
 	if data, ok := s.thumbs.load(key); ok {
 		writeThumb(w, data)
 		return
@@ -353,7 +364,7 @@ func (s *Server) handleThumb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := s.renderThumb(abs, st)
+	data, err := s.renderThumb(abs, st, edge)
 	if err != nil {
 		// The page keeps its icon when this 404s, so an unsupported format is
 		// simply a file without a preview.
@@ -374,15 +385,15 @@ func writeThumb(w http.ResponseWriter, data []byte) {
 }
 
 // renderThumb produces the JPEG bytes for one file.
-func (s *Server) renderThumb(abs string, st os.FileInfo) ([]byte, error) {
+func (s *Server) renderThumb(abs string, st os.FileInfo, edge int) ([]byte, error) {
 	if isVideoName(abs) || !nativeImage(abs) {
-		return s.ffmpegThumb(abs)
+		return s.ffmpegThumb(abs, edge)
 	}
 	img, err := decodeThumbSource(abs, st)
 	if err != nil {
 		return nil, err
 	}
-	return encodeThumb(coverThumb(img, thumbSize))
+	return encodeThumb(coverThumb(img, edge))
 }
 
 func nativeImage(name string) bool {
@@ -483,14 +494,13 @@ func encodeThumb(img image.Image) ([]byte, error) {
 // ffmpegThumb is the escape hatch for everything the standard library cannot
 // read: video, HEIC, AVIF. ffmpeg is taken from PATH, never bundled, so the
 // single-file promise holds and the feature is simply absent without it.
-func (s *Server) ffmpegThumb(abs string) ([]byte, error) {
+func (s *Server) ffmpegThumb(abs string, edge int) ([]byte, error) {
 	bin := s.ffmpegPath()
 	if bin == "" {
 		return nil, errNoThumb
 	}
-	filter := fmt.Sprintf(
-		"scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
-		thumbSize, thumbSize, thumbSize, thumbSize)
+	filter := fmt.Sprintf("[0:v]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d[v]",
+		edge, edge, edge, edge)
 
 	run := func(seek string) ([]byte, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), thumbTimeout)
@@ -501,9 +511,12 @@ func (s *Server) ffmpegThumb(abs string) ([]byte, error) {
 			// every frame up to that point.
 			args = append(args, "-ss", seek)
 		}
-		args = append(args, "-i", abs, "-frames:v", "1", "-vf", filter,
+		args = append(args, "-i", abs, "-frames:v", "1",
+			"-filter_complex", filter, "-map", "[v]",
 			"-f", "image2pipe", "-vcodec", "mjpeg", "-q:v", "4", "pipe:1")
 		cmd := exec.CommandContext(ctx, bin, args...)
+		// A GUI host must not flash a console for each preview.
+		cmd.SysProcAttr = quietProc()
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		if err := cmd.Run(); err != nil {
@@ -537,7 +550,7 @@ func (s *Server) ffmpegPath() string {
 // image URLs.
 func (s *Server) SetThumbnails(on bool) {
 	s.thumbsOn.Store(on)
-	if on {
-		s.ffmpeg.Store(FfmpegPath())
-	}
+	// PATH can change between launches; refreshing here also picks up an
+	// ffmpeg the user installed after starting the app.
+	s.ffmpeg.Store(FfmpegPath())
 }

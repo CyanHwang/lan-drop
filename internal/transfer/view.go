@@ -94,7 +94,10 @@ type viewEntry struct {
 	// ThumbHref is empty unless previews are on and this file can be decoded.
 	// The version in the URL is the file's size and mtime: it exists for the
 	// browser's cache, not for the server's.
-	ThumbHref    string
+	ThumbHref string
+	// ViewerHref is a large server-rendered rendition for formats the browser
+	// cannot display itself (HEIC, AVIF, TIFF) and for oversized originals.
+	ViewerHref   string
 	IsDir        bool
 	Icon         string
 	Sub          string
@@ -623,10 +626,17 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 			ve.Icon = iconFor(e.Name)
 			ve.DownloadHref = "/api/download?share=" + url.QueryEscape(sh.ID) +
 				"&path=" + url.QueryEscape(rel)
+			version := strconv.FormatInt(e.Size, 10) + "-" + strconv.FormatInt(e.ModTime, 10)
+			base := "/api/thumb?share=" + url.QueryEscape(sh.ID) +
+				"&path=" + url.QueryEscape(rel) + "&v=" + version
 			if s.thumbsOn.Load() && previewable(e.Name, s.ffmpegPath()) {
-				ve.ThumbHref = "/api/thumb?share=" + url.QueryEscape(sh.ID) +
-					"&path=" + url.QueryEscape(rel) +
-					"&v=" + strconv.FormatInt(e.Size, 10) + "-" + strconv.FormatInt(e.ModTime, 10)
+				ve.ThumbHref = base
+			}
+			// The viewer is an explicit user action, so its rendition exists
+			// even when automatic listing thumbnails are switched off. Only
+			// formats the browser cannot show on its own need this path.
+			if s.viewable(e.Name) && viewerImageName(e.Name) {
+				ve.ViewerHref = base + "&size=large"
 			}
 		}
 		p.Entries = append(p.Entries, ve)
@@ -736,6 +746,23 @@ func unixMilliToTime(ms int64) time.Time {
 		return time.Time{}
 	}
 	return time.UnixMilli(ms)
+}
+
+// viewerImageName covers formats that should come back through the server's
+// renderer rather than being handed to the browser as a raw file. SVG is
+// excluded: it is safe in an <img> but cannot be decoded by image.Decode.
+func viewerImageName(name string) bool {
+	if strings.EqualFold(filepath.Ext(name), ".svg") {
+		return false
+	}
+	if nativeImage(name) {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".heic", ".heif", ".avif":
+		return true
+	}
+	return false
 }
 
 // viewable names the formats the in-page viewer can do something with.

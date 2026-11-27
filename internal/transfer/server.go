@@ -194,7 +194,9 @@ func (c *ipCache) get() []string {
 func New(emit func(string, any)) *Server {
 	s := &Server{emit: emit, thumbs: newThumbCache()}
 	s.lang.Store(i18n.EN)
-	s.ffmpeg.Store("")
+	// Resolved even with thumbnails off: the full-screen viewer needs ffmpeg
+	// for HEIC and AVIF on explicit request.
+	s.ffmpeg.Store(FfmpegPath())
 	return s
 }
 

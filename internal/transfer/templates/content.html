@@ -17,7 +17,7 @@
 {{else if eq .Mode "files"}}
   <ul class="files" id="fileList"{{if .Empty}} hidden{{end}}>
     {{range .Entries}}
-    <li data-rel="{{.Rel}}" data-dir="{{if .IsDir}}1{{else}}0{{end}}" data-size="{{.SizeText}}" data-created="{{.CreatedText}}" data-modified="{{.ModifiedText}}" data-view="{{if .Viewable}}1{{else}}0{{end}}" style="animation-delay:{{.Delay}}s">
+    <li data-rel="{{.Rel}}" data-dir="{{if .IsDir}}1{{else}}0{{end}}" data-size="{{.SizeText}}" data-created="{{.CreatedText}}" data-modified="{{.ModifiedText}}" data-view="{{if .Viewable}}1{{else}}0{{end}}" data-viewer="{{.ViewerHref}}" style="animation-delay:{{.Delay}}s">
       <span class="pick-zone" data-pick="{{.Rel}}">
         <button type="button" class="pick" aria-pressed="false" aria-label="{{.AriaSelect}}"><i>{{template "icoCheck"}}</i></button>
         <span class="ico{{if .IsDir}} dir{{end}}">{{template "icon" .Icon}}{{if .ThumbHref}}<img class="thumb" src="{{.ThumbHref}}" alt="" loading="lazy" decoding="async" onerror="this.remove()">{{end}}</span>

@@ -186,7 +186,7 @@ Each row keeps a single "⋯" trigger; view, open folder, download and delete li
 
 Files with a preview open in a full-screen viewer:
 
-- **Images** — drag to pan, wheel to zoom around the cursor, percentage in the toolbar; the footer shows the name, creation time, modification time and size. Double-click toggles between fit and 100%.
+- **Images** — drag to pan, wheel to zoom around the cursor, percentage in the toolbar; the footer shows the name, creation time, modification time and size. Double-click toggles between fit and 100%. Formats the browser cannot show (HEIC, AVIF) are converted by ffmpeg; this is an explicit click, so it works even with automatic thumbnails switched off.
 - **Markdown** — rendered with a local `marked` and sanitised with `DOMPurify`, so HTML inside a document cannot run script in the page.
 - **docx** — converted with local `mammoth`; **xlsx / xls** — local `SheetJS` renders the first sheet, up to 500 rows.
 - **PDF** — the browser's built-in viewer.
