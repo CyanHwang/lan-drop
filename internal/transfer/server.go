@@ -3,7 +3,6 @@ package transfer
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -21,26 +20,6 @@ import (
 
 	"github.com/CyanHwang/lan-drop/internal/i18n"
 )
-
-// The browser UI is embedded in the binary and served over the LAN listener,
-// not through the Wails asset handler (which only feeds the WebView).
-//
-//go:embed mobile.html
-var mobileHTML []byte
-
-// pageBuild identifies the embedded browser UI. The page carries the same id
-// and reloads itself when the two differ. Without it a rebuilt binary keeps
-// feeding the old script to a tab that was already open, which makes every
-// server-side fix look like it did nothing at all.
-var pageBuild = func() string {
-	sum := sha256.Sum256(mobileHTML)
-	return hex.EncodeToString(sum[:6])
-}()
-
-// pageBuildMarker is replaced in the served HTML. It lives in the file rather
-// than being injected by string surgery at build time so the HTML stays valid
-// on its own when opened directly.
-const pageBuildMarker = "__PAGE_BUILD__"
 
 // Share is one directory exposed over the LAN.
 type Share struct {
@@ -145,6 +124,10 @@ type Server struct {
 	since    time.Time
 	readOnly atomic.Bool
 	lang     atomic.Value // i18n.Lang
+	// langSet records that the host actually chose a language, so a browser
+	// that asks for another one can be honoured when it has not. A default is
+	// not a decision.
+	langSet atomic.Bool
 	// Set while Stop() tears the listener down. In-flight uploads see a read
 	// error from the closed socket, which is indistinguishable from a client
 	// hanging up unless we remember that we were the ones who closed it.
@@ -241,6 +224,7 @@ func (s *Server) SetLanguage(l i18n.Lang) {
 		l = i18n.EN
 	}
 	s.lang.Store(l)
+	s.langSet.Store(true)
 }
 
 func (s *Server) publish(name string, data any) {
@@ -262,6 +246,7 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 
 	if opt.Lang != "" {
 		s.lang.Store(opt.Lang)
+		s.langSet.Store(true)
 	}
 	lang := s.L()
 
@@ -318,7 +303,13 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	mux.HandleFunc("POST /api/mkdir", s.handleMkdir)
 	mux.HandleFunc("DELETE /api/file", s.handleDelete)
 	mux.HandleFunc("GET /api/info", s.handleInfo)
-	mux.HandleFunc("GET /", s.handleIndex)
+
+	// The browser UI. Paths are real, not fragments: a listing can be
+	// refreshed, bookmarked and opened from the address bar.
+	mux.HandleFunc("GET /static/", serveStatic)
+	mux.HandleFunc("GET /s/{share}/{$}", s.handleShare)
+	mux.HandleFunc("GET /s/{share}/{dir...}", s.handleShare)
+	mux.HandleFunc("GET /", s.handleRoot)
 
 	srv := &http.Server{
 		Handler: mux,
@@ -478,8 +469,7 @@ var (
 // resolve maps a share id plus a URL-relative path onto the filesystem and
 // refuses anything that escapes that share's root, including via symlinks.
 // Errors are already localised: callers surface them straight to the client.
-func (s *Server) resolve(shareID, rel string) (string, Share, error) {
-	lang := s.L()
+func (s *Server) resolve(lang i18n.Lang, shareID, rel string) (string, Share, error) {
 	sh, ok := s.shareByID(shareID)
 	if !ok {
 		return "", Share{}, errors.New(i18n.T(lang, i18n.ErrShareNotFound))

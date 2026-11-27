@@ -52,7 +52,7 @@ func (s *Server) handleZipDownload(w http.ResponseWriter, r *http.Request) {
 	// UI posts a form instead, so selecting thousands of entries does not run
 	// into URL length limits.
 	if err := r.ParseForm(); err != nil {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrBadPath))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrBadPath))
 		return
 	}
 
@@ -61,17 +61,17 @@ func (s *Server) handleZipDownload(w http.ResponseWriter, r *http.Request) {
 	rels := r.Form["paths"]
 
 	if len(rels) == 0 {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrNothingSelected))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrNothingSelected))
 		return
 	}
 	if len(rels) > maxZipPaths {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrTooManyItems, maxZipPaths))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrTooManyItems, maxZipPaths))
 		return
 	}
 
 	sh, ok := s.shareByID(shareID)
 	if !ok {
-		fail(w, http.StatusForbidden, i18n.T(s.L(), i18n.ErrShareNotFound))
+		fail(w, http.StatusForbidden, i18n.T(s.langFor(r), i18n.ErrShareNotFound))
 		return
 	}
 
@@ -84,7 +84,7 @@ func (s *Server) handleZipDownload(w http.ResponseWriter, r *http.Request) {
 		if rel == "" {
 			continue
 		}
-		abs, _, err := s.resolve(shareID, rel)
+		abs, _, err := s.resolve(s.langFor(r), shareID, rel)
 		if err != nil {
 			// A path that escapes the share is a bug or an attack, not a race.
 			fail(w, http.StatusForbidden, err.Error())
@@ -104,7 +104,7 @@ func (s *Server) handleZipDownload(w http.ResponseWriter, r *http.Request) {
 		items = append(items, zipItem{abs: abs, entry: zipEntryName(dir, rel), isDir: st.IsDir()})
 	}
 	if len(items) == 0 {
-		fail(w, http.StatusNotFound, i18n.T(s.L(), i18n.ErrFileNotFound))
+		fail(w, http.StatusNotFound, i18n.T(s.langFor(r), i18n.ErrFileNotFound))
 		return
 	}
 

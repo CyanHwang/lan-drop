@@ -11,5 +11,10 @@ export enum Lang {
     $zero = "",
 
     EN = "en",
+
+    /**
+     * A script subtag, not a region: the catalogue is about the writing system,
+     * not about where the reader happens to live.
+     */
     ZHCN = "zh-Hans",
 };

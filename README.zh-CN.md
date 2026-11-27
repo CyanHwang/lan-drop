@@ -172,9 +172,11 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 两处可以切换：
 
 - **桌面窗口** —— 顶栏的切换按钮，点击后写回 `lan-drop.ini`
-- **浏览器端** —— 顶栏的切换按钮，按浏览器记在 `localStorage`
+- **浏览器端** —— 顶栏的切换按钮，按浏览器记在 `landrop_lang` Cookie
 
-浏览器默认使用主机的语言配置；在该浏览器里手动选过就以手动选择为准，且不会写回主机配置。
+浏览器端默认使用主机的语言配置；在该浏览器里手动选过就以手动选择为准，且不会写回主机配置。
+用 `-tags server` 启动且 `lan-drop.ini` 里没有写死语言时，浏览器端改用 `Accept-Language`，
+中文手机会直接看到中文。
 
 ## HTTP 接口
 
@@ -182,7 +184,9 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/` | 浏览器界面 |
+| GET | `/` | 共享目录选择页（只有一个共享时直接跳转） |
+| GET | `/s/{share}/{dir}` | 服务端渲染的目录页 |
+| GET | `/static/` | 样式与脚本，按构建号长期缓存 |
 | GET | `/api/list?share=&dir=` | 目录列表；`share` 为空时返回虚拟根 |
 | GET | `/api/download?share=&path=` | 单文件下载，支持 `Range` |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | 批量打包；`paths` 可重复，POST 用表单体提交大量选择 |
@@ -235,7 +239,9 @@ internal/transfer    HTTP 服务、路径校验、流式收发、进度上报
   handlers.go        单文件下载与写入类接口
   zip.go             流式批量打包、目录遍历、条目命名
   netutil.go         端口探测、局域网 IP 排序
-  mobile.html        内嵌的浏览器端单页
+  view.go            页面渲染：模板数据、路径构建、语言解析
+  templates/         html/template 模板（页面骨架、列表、图标）
+  static/            浏览器端 CSS 与 JS，按构建号长期缓存
 ```
 
 ## 安全说明

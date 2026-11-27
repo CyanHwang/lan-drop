@@ -1,7 +1,6 @@
 package transfer
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"hash"
@@ -14,22 +13,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/CyanHwang/lan-drop/internal/i18n"
 )
-
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "/api/") {
-		fail(w, http.StatusNotFound, i18n.T(s.L(), i18n.ErrUnknownEndpoint))
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	_, _ = w.Write(bytes.Replace(mobileHTML, []byte(pageBuildMarker), []byte(pageBuild), -1))
-}
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	info := s.Info()
@@ -38,7 +26,7 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 		"port":     info.Port,
 		"count":    len(info.Shares),
 		"readOnly": info.ReadOnly,
-		"lang":     string(s.L()),
+		"lang":     string(s.langFor(r)),
 		// The page compares this with its own id and reloads itself when a new
 		// binary is deployed under an already-open tab.
 		"build": pageBuild,
@@ -65,6 +53,7 @@ type listResponse struct {
 func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	shareID := q.Get("share")
+	lang := s.langFor(r)
 
 	// No share selected: the virtual root lists every shared folder.
 	if shareID == "" {
@@ -83,77 +72,11 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dir := strings.Trim(q.Get("dir"), "/")
-	abs, sh, err := s.resolve(shareID, dir)
+	entries, sh, status, err := s.listDir(lang, shareID, dir)
 	if err != nil {
-		fail(w, http.StatusForbidden, err.Error())
+		fail(w, status, err.Error())
 		return
 	}
-
-	st, err := os.Stat(abs)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			fail(w, http.StatusNotFound, i18n.T(s.L(), i18n.ErrDirNotFound))
-			return
-		}
-		fail(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if !st.IsDir() {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrNotFolder))
-		return
-	}
-
-	dirents, err := os.ReadDir(abs)
-	if err != nil {
-		fail(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	showHidden, showDotfiles := s.ViewOptions()
-	filter := s.Filter()
-
-	entries := make([]Entry, 0, len(dirents))
-	for _, de := range dirents {
-		info, err := de.Info()
-		if err != nil {
-			continue
-		}
-		// Two independent filters: the dot prefix is a naming convention that
-		// works everywhere, the hidden attribute only exists on Windows.
-		if !showDotfiles && strings.HasPrefix(de.Name(), ".") {
-			continue
-		}
-		// Upload bookkeeping is not user data. Showing a half-written .part
-		// next to real files is how someone ends up opening a corrupt ISO.
-		if isPartArtifact(de.Name()) {
-			continue
-		}
-		if !showHidden && isHiddenInfo(info) {
-			continue
-		}
-		if filter.Match(de.Name()) {
-			continue
-		}
-		// Hide dangling or escaping symlinks rather than exposing them.
-		if de.Type()&fs.ModeSymlink != 0 {
-			if _, _, err := s.resolve(shareID, path.Join(dir, de.Name())); err != nil {
-				continue
-			}
-		}
-		entries = append(entries, Entry{
-			Name:    de.Name(),
-			IsDir:   de.IsDir(),
-			Size:    info.Size(),
-			ModTime: info.ModTime().UnixMilli(),
-		})
-	}
-
-	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].IsDir != entries[j].IsDir {
-			return entries[i].IsDir
-		}
-		return strings.ToLower(entries[i].Name) < strings.ToLower(entries[j].Name)
-	})
 
 	var parent *string
 	if dir != "" {
@@ -185,12 +108,12 @@ func (s *Server) handleProbe(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name, err := sanitizeName(q.Get("name"))
 	if err != nil {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrInvalidName))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrInvalidName))
 		return
 	}
 	dir := strings.Trim(q.Get("dir"), "/")
 
-	abs, _, err := s.resolve(q.Get("share"), path.Join(dir, name))
+	abs, _, err := s.resolve(s.langFor(r), q.Get("share"), path.Join(dir, name))
 	if err != nil {
 		fail(w, http.StatusForbidden, err.Error())
 		return
@@ -238,11 +161,11 @@ func (c *countWriter) Write(p []byte) (int, error) {
 func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	rel := strings.Trim(r.URL.Query().Get("path"), "/")
 	if rel == "" {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrMissingPath))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrMissingPath))
 		return
 	}
 
-	abs, sh, err := s.resolve(r.URL.Query().Get("share"), rel)
+	abs, sh, err := s.resolve(s.langFor(r), r.URL.Query().Get("share"), rel)
 	if err != nil {
 		fail(w, http.StatusForbidden, err.Error())
 		return
@@ -251,7 +174,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(abs)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fail(w, http.StatusNotFound, i18n.T(s.L(), i18n.ErrFileNotFound))
+			fail(w, http.StatusNotFound, i18n.T(s.langFor(r), i18n.ErrFileNotFound))
 			return
 		}
 		fail(w, http.StatusInternalServerError, err.Error())
@@ -265,7 +188,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if st.IsDir() {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrTargetIsFolder))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrTargetIsFolder))
 		return
 	}
 
@@ -292,9 +215,9 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 
 // writable rejects mutating requests when the server was started read-only.
 // Returns false when the response has already been written.
-func (s *Server) writable(w http.ResponseWriter) bool {
+func (s *Server) writable(w http.ResponseWriter, r *http.Request) bool {
 	if s.readOnly.Load() {
-		fail(w, http.StatusForbidden, i18n.T(s.L(), i18n.ErrReadOnly))
+		fail(w, http.StatusForbidden, i18n.T(s.langFor(r), i18n.ErrReadOnly))
 		return false
 	}
 	return true
@@ -308,10 +231,10 @@ func (s *Server) writable(w http.ResponseWriter) bool {
 // only when the byte count matches the declared size. That single rule is what
 // keeps a half-transferred file from ever being mistaken for a complete one.
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
-	if !s.writable(w) {
+	if !s.writable(w, r) {
 		return
 	}
-	lang := s.L()
+	lang := s.langFor(r)
 	q := r.URL.Query()
 	dir := strings.Trim(q.Get("dir"), "/")
 
@@ -321,7 +244,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	abs, sh, err := s.resolve(q.Get("share"), path.Join(dir, name))
+	abs, sh, err := s.resolve(s.langFor(r), q.Get("share"), path.Join(dir, name))
 	if err != nil {
 		fail(w, http.StatusForbidden, err.Error())
 		return
@@ -584,7 +507,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 // without this the server can only guess that "the client vanished" — and the
 // desktop would show a cancellation as a network failure.
 func (s *Server) handleUploadCancel(w http.ResponseWriter, r *http.Request) {
-	lang := s.L()
+	lang := s.langFor(r)
 	id, ok := normalizeUploadID(r.URL.Query().Get("id"))
 	if !ok {
 		fail(w, http.StatusBadRequest, i18n.T(lang, i18n.ErrMissingId))
@@ -697,7 +620,7 @@ func uploadError(lang i18n.Lang, err error, written int64) string {
 }
 
 func (s *Server) handleMkdir(w http.ResponseWriter, r *http.Request) {
-	if !s.writable(w) {
+	if !s.writable(w, r) {
 		return
 	}
 	q := r.URL.Query()
@@ -705,11 +628,11 @@ func (s *Server) handleMkdir(w http.ResponseWriter, r *http.Request) {
 
 	name, err := sanitizeName(q.Get("name"))
 	if err != nil {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrInvalidName))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrInvalidName))
 		return
 	}
 
-	abs, _, err := s.resolve(q.Get("share"), path.Join(dir, name))
+	abs, _, err := s.resolve(s.langFor(r), q.Get("share"), path.Join(dir, name))
 	if err != nil {
 		fail(w, http.StatusForbidden, err.Error())
 		return
@@ -722,16 +645,16 @@ func (s *Server) handleMkdir(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
-	if !s.writable(w) {
+	if !s.writable(w, r) {
 		return
 	}
 	rel := strings.Trim(r.URL.Query().Get("path"), "/")
 	if rel == "" {
-		fail(w, http.StatusBadRequest, i18n.T(s.L(), i18n.ErrDeleteRoot))
+		fail(w, http.StatusBadRequest, i18n.T(s.langFor(r), i18n.ErrDeleteRoot))
 		return
 	}
 
-	abs, _, err := s.resolve(r.URL.Query().Get("share"), rel)
+	abs, _, err := s.resolve(s.langFor(r), r.URL.Query().Get("share"), rel)
 	if err != nil {
 		fail(w, http.StatusForbidden, err.Error())
 		return
@@ -740,7 +663,7 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	// os.Remove only deletes files and empty directories — no recursive wipe.
 	if err := os.Remove(abs); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fail(w, http.StatusNotFound, i18n.T(s.L(), i18n.ErrNotFound))
+			fail(w, http.StatusNotFound, i18n.T(s.langFor(r), i18n.ErrNotFound))
 			return
 		}
 		fail(w, http.StatusConflict, err.Error())

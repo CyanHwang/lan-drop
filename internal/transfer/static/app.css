@@ -1,0 +1,831 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --bg-glow: rgba(59,108,246,.07);
+  --surface: #ffffff;
+  --surface-2: #f2f3f6;
+  --surface-3: #e9ebf0;
+  --line: rgba(16,22,40,.07);
+  --line-2: rgba(16,22,40,.13);
+  --text: #14171f;
+  --text-2: #414659;
+  --muted: #7b8196;
+  --accent: #3b6cf6;
+  --accent-soft: rgba(59,108,246,.09);
+  --ok: #0f9d63;
+  --ok-soft: rgba(15,157,99,.12);
+  --err: #d93a3a;
+  --err-soft: rgba(217,58,58,.09);
+  --shadow: 0 1px 2px rgba(16,22,40,.04), 0 8px 24px rgba(16,22,40,.06);
+  --shadow-pop: 0 2px 8px rgba(16,22,40,.08), 0 20px 48px rgba(16,22,40,.14);
+  --radius: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #06070f;
+    --bg-glow: rgba(91,140,255,.1);
+    --surface: #0d0f18;
+    --surface-2: #151826;
+    --surface-3: #1c2030;
+    --line: rgba(255,255,255,.07);
+    --line-2: rgba(255,255,255,.13);
+    --text: #e8eaf2;
+    --text-2: #b6bccd;
+    --muted: #767c92;
+    --accent: #5b8cff;
+    --accent-soft: rgba(91,140,255,.13);
+    --ok: #3ecf8e;
+    --ok-soft: rgba(62,207,142,.14);
+    --err: #ff5c5c;
+    --err-soft: rgba(255,92,92,.1);
+    --shadow: 0 1px 2px rgba(0,0,0,.28), 0 10px 30px rgba(0,0,0,.3);
+    --shadow-pop: 0 2px 8px rgba(0,0,0,.4), 0 20px 48px rgba(0,0,0,.5);
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+[hidden] { display: none !important; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .26s ease, color .26s ease;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(520px 260px at 50% -6%, var(--bg-glow), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes check-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheet-up {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 760px;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- top ---------- */
+
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 16px) 18px 8px;
+}
+
+.brand {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  user-select: none;
+  color: inherit;
+  text-decoration: none;
+}
+.brand span { color: var(--accent); }
+
+.root-chip {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+  max-width: 52%;
+  transition: background-color .2s, border-color .2s;
+}
+.root-chip b {
+  font-weight: 500;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.root-chip .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+
+/* Compact language toggle: shows the language you would switch TO, which is
+   clearer than labelling the current one. It is a plain link, so the switch is
+   a page load and the server decides everything. */
+.lang-btn {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 5px 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: color .2s, border-color .2s;
+}
+.lang-btn:hover { color: var(--text-2); border-color: var(--accent); }
+
+/* ---------- breadcrumbs ---------- */
+
+/* The back button stays put while the path beside it scrolls. */
+.crumb-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px 10px;
+}
+.back-btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .18s, border-color .18s, background-color .18s;
+}
+.back-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.back-btn.off { opacity: .35; cursor: default; border-color: var(--line); }
+.back-btn.off:hover { color: var(--text-2); border-color: var(--line); background: var(--surface); }
+.back-btn svg { width: 17px; height: 17px; display: block; }
+
+.crumbs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-size: 13px;
+}
+.crumbs::-webkit-scrollbar { display: none; }
+
+.crumbs a,
+.crumbs .current {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .16s, color .16s;
+}
+.crumbs a:active { background: var(--surface-2); }
+.crumbs .current { color: var(--text); font-weight: 500; }
+.crumbs .sep { color: var(--line-2); flex-shrink: 0; font-size: 11px; }
+
+/* ---------- list ---------- */
+
+main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 12px 18px;
+}
+
+ul.files { list-style: none; margin: 0; padding: 0; }
+
+/* Flat rows separated by a hairline, not a stack of cards. The selected row
+   gets its tint and rail, but the rule between rows never disappears — losing
+   it made consecutive selected items read as one oversized block. */
+ul.files li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  animation: item-in .38s cubic-bezier(.22,.8,.3,1) backwards;
+  transition: background-color .2s ease;
+}
+/* File/folder rows carry no padding of their own. Padding on the row left a
+   strip outside the selection zone; tapping there fell through to the folder
+   navigation handler. Each child now owns its share of the inset instead. */
+ul.files li[data-rel] { padding: 0; }
+ul.files li[data-rel] > .pick-zone { padding: 11px 0 11px 6px; }
+ul.files li[data-rel] > .meta { padding: 11px 0; }
+ul.files li[data-rel] > .row-actions { padding: 11px 12px 11px 0; }
+ul.files li + li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 100px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line), transparent 88%);
+  pointer-events: none;
+}
+/* Share-picker rows have no selection zone, so their text starts 38px earlier. */
+ul.files li[data-share] + li[data-share]::before { left: 62px; }
+/* ::before is the separator, so the accent rail uses ::after. */
+ul.files li.sel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+ul.files li.sel { background: var(--accent-soft); }
+
+/* Checkbox, the gap beside it and the icon are one continuous hot zone. A
+   finger landing in the space between still selects, which is where most
+   near-misses used to go. The button keeps keyboard semantics. */
+.pick-zone {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.pick {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 32px;
+  border: 0;
+  background: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: inherit;
+}
+button.pick i {
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
+  border: 1.5px solid var(--line-2);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.pick-zone:hover button.pick i { border-color: var(--accent); }
+button.pick.on i {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 2px 7px rgba(59,108,246,.26);
+}
+button.pick i svg {
+  width: 14px;
+  height: 14px;
+  color: #fff;
+  opacity: 0;
+}
+button.pick i svg path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+button.pick.on i svg { opacity: 1; }
+button.pick.on i svg path { animation: check-draw .26s cubic-bezier(.3,.9,.3,1) .04s forwards; }
+
+.pick-zone:hover .ico {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* A selected row carries three cues: tinted surface, accent rail on the left,
+   and a solid accent icon. Nothing moves, but the layer gap is unmistakable. */
+ul.files li.sel .pick-zone .ico,
+ul.files li.sel .pick-zone:hover .ico {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(59,108,246,.24);
+}
+ul.files li.sel .name { font-weight: 500; }
+
+/* Folder rows also navigate from the name area; files do nothing there. */
+ul.files li[data-dir="1"]:hover .name { color: var(--accent); }
+
+.ico {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: background-color .2s, box-shadow .2s, color .2s;
+}
+.ico.dir {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+.ico svg { width: 19px; height: 19px; }
+
+.meta {
+  min-width: 0;
+  flex: 1;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.name {
+  display: block;
+  font-size: 14.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-actions {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+}
+.act-btn {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  padding: 9px;
+  cursor: pointer;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background .16s, color .16s;
+}
+.act-btn.dl:active { background: var(--accent-soft); color: var(--accent); }
+.act-btn.del:active { background: var(--err-soft); color: var(--err); }
+.act-btn svg { width: 16px; height: 16px; display: block; }
+
+.share-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.share-link:hover .name { color: var(--accent); }
+
+.chev {
+  color: var(--muted);
+  opacity: .4;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.chev svg { width: 16px; height: 16px; }
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 64px 24px;
+  animation: fade-in .3s ease both;
+}
+.empty svg { width: 30px; height: 30px; opacity: .35; }
+.empty b { font-weight: 500; font-size: 14px; color: var(--text-2); }
+.empty .action.ghost { margin-top: 8px; text-decoration: none; font-size: 13.5px; padding: 10px 16px; }
+
+/* Only shown when a directory holds more rows than one page renders. */
+.trunc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 18px 12px 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.trunc a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+/* ---------- dock ---------- */
+
+.dock {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  gap: 9px;
+  padding: 10px 14px calc(env(safe-area-inset-bottom) + 12px);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color .26s, background-color .26s;
+}
+
+/* Selection bar. Fixed to the viewport rather than to the dock, because a
+   read-only server renders no dock at all and selection still has to work. */
+.selbar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 86px);
+  width: calc(100% - 20px);
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 7px 7px 10px;
+  border-radius: 15px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-pop);
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity .18s, transform .18s;
+  z-index: 15;
+}
+body.no-dock .selbar { bottom: calc(env(safe-area-inset-bottom) + 18px); }
+.selbar.on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.selbar .all {
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.selbar .all:active { background: var(--accent-soft); }
+.selbar .count {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.selbar .spacer { flex: 1; min-width: 4px; }
+.selbar button.action {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  font-size: 13.5px;
+  border-radius: 10px;
+  gap: 6px;
+}
+.selbar button.action.primary { flex: 0 0 auto; box-shadow: none; }
+.selbar button.action.ghost {
+  flex: 0 0 auto;
+  padding: 9px 10px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.selbar button.action svg { width: 15px; height: 15px; }
+
+button.action {
+  border: 0;
+  border-radius: 13px;
+  padding: 15px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  touch-action: manipulation;
+  transition: opacity .16s, background-color .16s;
+}
+button.action:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button.action.primary {
+  flex: 1;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 2px 6px rgba(59,108,246,.28), 0 10px 24px rgba(59,108,246,.22);
+}
+button.action.primary:active { opacity: .88; }
+
+button.action.ghost {
+  flex: 0 0 auto;
+  padding: 15px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+button.action svg { width: 18px; height: 18px; }
+
+/* ---------- upload sheet ---------- */
+
+.sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 20px);
+  max-width: 740px;
+  bottom: calc(env(safe-area-inset-bottom) + 86px);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 4px;
+  max-height: 46vh;
+  display: none;
+  flex-direction: column;
+  z-index: 20;
+  box-shadow: var(--shadow-pop);
+  animation: sheet-up .28s cubic-bezier(.22,.8,.3,1) both;
+}
+.sheet.show { display: flex; }
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.sheet-head b {
+  font-weight: 500;
+  color: var(--text);
+  font-size: 12.5px;
+}
+.sheet-head .spacer { flex: 1; }
+.sheet-head button {
+  border: 0; background: none; color: var(--muted);
+  font: inherit; font-size: 12px;
+  padding: 3px 7px; border-radius: 7px; cursor: pointer;
+}
+.sheet-head button:active { background: var(--surface-2); }
+/* Destructive: dropping the queue is the one irreversible action in this panel. */
+.sheet-head button.danger { color: var(--err); }
+.sheet-head button.danger:active { background: var(--err-soft); }
+
+/* Floating entry point while the panel is hidden. Hiding it must not also hide
+   the only way back to progress and to the cancel button. */
+.up-pill {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  transform: translateX(-50%);
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+}
+.up-pill[hidden] { display: none; }
+.up-pill-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #fff;
+  animation: up-pulse 1.4s ease-in-out infinite;
+}
+@keyframes up-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* Drop target is the whole window: aiming at a 300 px panel is silly. */
+.drop-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 2px dashed var(--accent);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.drop-hint[hidden] { display: none; }
+
+.sheet-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 4px 4px;
+}
+
+.task { padding: 9px 8px 10px; }
+.task + .task { border-top: 1px solid var(--line); }
+
+.task-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+.task-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-pct {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.bar {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .2s linear, background-color .2s;
+}
+.bar > i::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 34%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: shimmer 1.5s ease-in-out infinite;
+  opacity: 0;
+}
+.task.run .bar > i::after { opacity: 1; }
+.task.done .bar > i { background: var(--ok); }
+.task.done .bar > i::after { opacity: 0; }
+.task.err .bar > i { background: var(--err); width: 100% !important; }
+.task.err .bar > i::after { opacity: 0; }
+
+.task-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.task.err .task-sub { color: var(--err); }
+
+/* ---------- toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 168px);
+  transform: translate(-50%, 10px);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 22px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 30;
+  max-width: 84vw;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  animation: toast-in .24s cubic-bezier(.22,.8,.3,1);
+}
+
+/* ---------- wide screens ---------- */
+
+@media (min-width: 760px) {
+  .app { max-width: 900px; }
+  .topbar { padding-left: 22px; padding-right: 22px; }
+  .crumb-row { padding-left: 18px; padding-right: 18px; }
+  main { padding-left: 16px; padding-right: 16px; }
+
+  ul.files {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 10px;
+    row-gap: 0;
+  }
+  /* li + li keys off DOM order, but in a grid the first visual row has N
+     cells. Hide the rule on all of them so every row starts clean. */
+  ul.files li:nth-child(-n+2)::before { display: none; }
+
+  .dock { justify-content: center; }
+  .dock .action.primary { flex: 0 1 420px; }
+}
+
+@media (min-width: 1180px) {
+  .app { max-width: 1220px; }
+  ul.files { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  ul.files li:nth-child(-n+3)::before { display: none; }
+}
+
+@media (min-width: 1560px) {
+  .app { max-width: 1560px; }
+  ul.files { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  ul.files li:nth-child(-n+4)::before { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}

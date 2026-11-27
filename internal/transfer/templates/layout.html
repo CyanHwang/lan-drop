@@ -1,0 +1,70 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="{{.LangTag}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#06070f" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<title>{{.Title}}</title>
+<link rel="stylesheet" href="/static/app.css?v={{.Build}}">
+</head>
+<body class="{{if not .ShowDock}}no-dock{{end}}" data-share="{{.ShareID}}" data-dir="{{.Dir}}" data-build="{{.Build}}" data-readonly="{{if .ReadOnly}}1{{else}}0{{end}}">
+<div class="app">
+  <header class="topbar">
+    <a class="brand" href="{{.HomeHref}}">Lan<span>Drop</span></a>
+    <a class="lang-btn" href="{{.LangHref}}" aria-label="{{.LangAria}}" title="{{.LangAria}}">{{.LangLabel}}</a>
+    <div class="root-chip"><span class="dot"></span><b>{{.RootChip}}</b></div>
+  </header>
+  <div class="crumb-row">
+    {{if .HasBack}}<a class="back-btn" href="{{.BackHref}}" aria-label="{{.BackAria}}">{{template "icoBack"}}<span>{{.BackLabel}}</span></a>{{else}}<span class="back-btn off" aria-disabled="true">{{template "icoBack"}}<span>{{.BackLabel}}</span></span>{{end}}
+    <nav class="crumbs" aria-label="{{.PathLabel}}">
+      {{range .Crumbs}}{{if .Sep}}<span class="sep">/</span>{{end}}{{if .Current}}<span class="current" aria-current="page">{{.Name}}</span>{{else}}<a href="{{.Href}}">{{.Name}}</a>{{end}}{{end}}
+    </nav>
+  </div>
+  <main id="main">
+    {{template "content" .}}
+  </main>
+  {{if .ShowDock}}
+  <footer class="dock">
+    <button class="action ghost" id="mkdirBtn" type="button" aria-label="{{.NewFolder}}" title="{{.NewFolder}}">{{template "icoNewFolder"}}</button>
+    <button class="action ghost" id="uploadDirBtn" type="button" aria-label="{{.UploadFolder}}" title="{{.UploadFolder}}">{{template "icoFolderUp"}}</button>
+    <button class="action primary" id="uploadBtn" type="button">
+      {{template "icoUpload"}}
+      <span>{{.UploadFiles}}</span>
+    </button>
+    <input type="file" id="fileInput" multiple hidden>
+    <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
+  </footer>
+  {{end}}
+</div>
+<div class="selbar" id="selBar" role="region" aria-label="{{.SelectAll}}">
+  <button class="all" id="selAll" type="button">{{.SelectAll}}</button>
+  <span class="count" id="selCount"></span>
+  <span class="spacer"></span>
+  <button class="action primary" id="selDownload" type="button">
+    {{template "icoZipDown"}}
+    <span>{{.DownloadZip}}</span>
+  </button>
+  <button class="action ghost" id="selClear" type="button" aria-label="{{.ClearPick}}" title="{{.ClearPick}}">{{template "icoClose"}}</button>
+</div>
+<div class="sheet" id="sheet">
+  <div class="sheet-head">
+    <b id="sheetTitle">{{.Upload}}</b>
+    <span class="spacer"></span>
+    <button id="sheetCancel" class="danger" type="button" hidden>{{.CancelAll}}</button>
+    <button id="sheetClose" type="button">{{.Hide}}</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+<button class="up-pill" id="upPill" type="button" hidden>
+  <span class="up-pill-dot"></span><span id="upPillText"></span>
+</button>
+<div class="drop-hint" id="dropHint" hidden><span>{{.DropHere}}</span></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<form id="zipForm" method="post" action="/api/download/zip" hidden></form>
+<script>window.__T={{.Runtime}};</script>
+<script src="/static/app.js?v={{.Build}}" defer></script>
+</body>
+</html>{{end}}

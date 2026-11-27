@@ -1,0 +1,48 @@
+{{define "content"}}{{if eq .Mode "roots"}}
+  {{if .Empty}}
+  <div class="empty">{{template "icoEmpty"}}<span>{{.EmptyText}}</span></div>
+  {{else}}
+  <ul class="files">
+    {{range .Roots}}
+    <li data-share="{{.ID}}" style="animation-delay:{{.Delay}}s">
+      <a class="share-link" href="{{.Href}}">
+        <span class="ico dir">{{template "icoDir"}}</span>
+        <span class="meta"><span class="name">{{.Name}}</span><span class="sub">{{$.SharedFolder}}</span></span>
+        <span class="chev">{{template "icoChev"}}</span>
+      </a>
+    </li>
+    {{end}}
+  </ul>
+  {{end}}
+{{else if eq .Mode "files"}}
+  <ul class="files" id="fileList"{{if .Empty}} hidden{{end}}>
+    {{range .Entries}}
+    <li data-rel="{{.Rel}}" data-dir="{{if .IsDir}}1{{else}}0{{end}}" style="animation-delay:{{.Delay}}s">
+      <span class="pick-zone" data-pick="{{.Rel}}">
+        <button type="button" class="pick" aria-pressed="false" aria-label="{{.AriaSelect}}"><i>{{template "icoCheck"}}</i></button>
+        <span class="ico{{if .IsDir}} dir{{end}}">{{template "icon" .Icon}}</span>
+      </span>
+      {{if .IsDir}}
+      <a class="meta" href="{{.Href}}"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></a>
+      {{else}}
+      <span class="meta"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></span>
+      {{end}}
+      <span class="row-actions">
+        {{if not .IsDir}}<a class="act-btn dl" href="{{.DownloadHref}}" download aria-label="{{$.Download}}" title="{{$.Download}}">{{template "icoDownload"}}</a>{{end}}
+        {{if $.CanWrite}}<button class="act-btn del" type="button" data-del="{{.Rel}}" aria-label="{{$.Delete}}" title="{{$.Delete}}">{{template "icoDelete"}}</button>{{end}}
+      </span>
+    </li>
+    {{end}}
+  </ul>
+  <div class="empty" id="emptyState"{{if not .Empty}} hidden{{end}}>{{template "icoEmpty"}}<span>{{.EmptyText}}</span></div>
+  {{if .Truncated}}
+  <div class="trunc"><span>{{.TruncNote}}</span><a href="{{.ShowAllHref}}">{{.ShowAll}}</a></div>
+  {{end}}
+{{else}}
+  <div class="empty">
+    {{template "icoEmpty"}}
+    <b>{{.ErrorTitle}}</b>
+    <span>{{.ErrorMessage}}</span>
+    <a class="action ghost" href="{{.HomeHref}}">{{.GoHome}}</a>
+  </div>
+{{end}}{{end}}

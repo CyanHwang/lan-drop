@@ -34,7 +34,7 @@
   <text x="367" y="287" font-size="10.5" fill="#3b6cf6" font-family="ui-monospace, Consolas, monospace">/api/list</text>
   <rect x="484" y="272" width="140" height="22" rx="5" fill="#eef2ff"/>
   <text x="493" y="287" font-size="10.5" fill="#3b6cf6" font-family="ui-monospace, Consolas, monospace">/api/upload</text>
-  <text x="358" y="314" font-size="10.5" fill="#7b8196">Embedded mobile.html · no external assets</text>
+  <text x="358" y="314" font-size="10.5" fill="#7b8196">html/template · embedded templates and assets</text>
 
   <rect x="340" y="348" width="150" height="52" rx="9" fill="#ffffff" stroke="#e2e6ee" stroke-width="1.5"/>
   <text x="356" y="369" font-size="11.5" font-weight="600" fill="#14171f">lan-drop.ini</text>

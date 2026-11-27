@@ -175,9 +175,10 @@ The OS language is detected on first launch and written to `lan-drop.ini`. From 
 Two ways to switch:
 
 - **Desktop window** — the language toggle in the top bar writes the choice back to `lan-drop.ini`
-- **Browser UI** — a toggle in the top bar, remembered per browser in `localStorage`
+- **Browser UI** — a toggle in the top bar, remembered per browser in the `landrop_lang` cookie
 
 The browser starts from the host's configured language. A manual choice in that browser wins, and it never writes to the host's config.
+On a `-tags server` build whose `lan-drop.ini` names no language, the browser falls back to `Accept-Language`, so a Chinese phone opens in Chinese.
 
 ## HTTP API
 
@@ -185,7 +186,9 @@ The browser page and every endpoint share one port. No extra services.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/` | Browser UI |
+| GET | `/` | Share picker (a single share redirects straight to it) |
+| GET | `/s/{share}/{dir}` | Rendered directory listing |
+| GET | `/static/` | Stylesheet and script, immutable-cached per build |
 | GET | `/api/list?share=&dir=` | Directory listing. Empty `share` returns the virtual root |
 | GET | `/api/download?share=&path=` | Single-file download, supports `Range` |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | Batch zip. `paths` repeats; POST accepts a form body for large selections |
@@ -240,7 +243,9 @@ internal/transfer    HTTP server, path validation, streaming, progress
   handlers.go        The single-file and write endpoints
   zip.go             Streaming batch zip, folder walking, entry naming
   netutil.go         Port probing, LAN address ranking
-  mobile.html        The embedded browser UI
+  view.go            Page rendering: template data, paths, language
+  templates/         html/template sources (shell, listing, icons)
+  static/            Browser CSS and JS, cached by build id
 ```
 
 ## Security

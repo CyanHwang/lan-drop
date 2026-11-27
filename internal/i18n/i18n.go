@@ -99,6 +99,78 @@ const (
 	CliStopError     Msg = "cli.stopError"
 )
 
+// Browser UI strings. They are rendered into the page by the server; the
+// handful that describe a running transfer are also shipped to the page as
+// JSON, because those are produced after it has loaded.
+const (
+	WebHome          Msg = "web.home"
+	WebPath          Msg = "web.path"
+	WebBack          Msg = "web.back"
+	WebBackAria      Msg = "web.backAria"
+	WebLangButton    Msg = "web.langButton"
+	WebSwitchToEN    Msg = "web.switchToEn"
+	WebSwitchToZH    Msg = "web.switchToZh"
+	WebUpload        Msg = "web.upload"
+	WebUploadFiles   Msg = "web.uploadFiles"
+	WebUploadFolder  Msg = "web.uploadFolder"
+	WebNewFolder     Msg = "web.newFolder"
+	WebHide          Msg = "web.hide"
+	WebCancelAll     Msg = "web.cancelAll"
+	WebDownloadZip   Msg = "web.downloadZip"
+	WebSelectAll     Msg = "web.selectAll"
+	WebClearAll      Msg = "web.clearAll"
+	WebClearPick     Msg = "web.clearPick"
+	WebSelectedCount Msg = "web.selectedCount"
+	WebSelectItem    Msg = "web.selectItem"
+	WebDropHere      Msg = "web.dropHere"
+	WebNoShares      Msg = "web.noShares"
+	WebSharedFolder  Msg = "web.sharedFolder"
+	WebEmptyFolder   Msg = "web.emptyFolder"
+	WebFolder        Msg = "web.folder"
+	WebDownload      Msg = "web.download"
+	WebDelete        Msg = "web.delete"
+	WebReadOnly      Msg = "web.readOnly"
+	WebNotConfigured Msg = "web.notConfigured"
+	WebShareCount    Msg = "web.shareCount"
+	WebTruncated     Msg = "web.truncated"
+	WebShowAll       Msg = "web.showAll"
+	WebErrorTitle    Msg = "web.errorTitle"
+	WebGoHome        Msg = "web.goHome"
+
+	WebUploading       Msg = "web.uploading"
+	WebUploadCount     Msg = "web.uploadCount"
+	WebUploadDone      Msg = "web.uploadDone"
+	WebActiveUploads   Msg = "web.activeUploads"
+	WebDone            Msg = "web.done"
+	WebFailed          Msg = "web.failed"
+	WebWaiting         Msg = "web.waiting"
+	WebServerDown      Msg = "web.serverDown"
+	WebRetrying        Msg = "web.retrying"
+	WebBusy            Msg = "web.busy"
+	WebSizeMismatch    Msg = "web.sizeMismatch"
+	WebResuming        Msg = "web.resuming"
+	WebFilesFailed     Msg = "web.filesFailed"
+	WebFilesUploaded   Msg = "web.filesUploaded"
+	WebCancelled       Msg = "web.cancelled"
+	WebStalled         Msg = "web.stalled"
+	WebReadFailed      Msg = "web.readFailed"
+	WebConnLost        Msg = "web.connLost"
+	WebCancelAllAsk    Msg = "web.cancelAllAsk"
+	WebUploadCancelled Msg = "web.uploadCancelled"
+	WebConfirmDelete   Msg = "web.confirmDelete"
+	WebDeleted         Msg = "web.deleted"
+	WebDeleteFailed    Msg = "web.deleteFailed"
+	WebDownloadStarted Msg = "web.downloadStarted"
+	WebEnterShare      Msg = "web.enterShare"
+	WebNewFolderName   Msg = "web.newFolderName"
+	WebCreated         Msg = "web.created"
+	WebCreateFailed    Msg = "web.createFailed"
+	WebZipStarted      Msg = "web.zipStarted"
+	WebSelectNothing   Msg = "web.selectNothing"
+	WebTooManyPicked   Msg = "web.tooManyPicked"
+	WebUnknownError    Msg = "web.unknownError"
+)
+
 var catalogue = map[Lang]map[Msg]string{
 	EN: {
 		ErrServerRunning:     "server is already running",
@@ -166,6 +238,73 @@ var catalogue = map[Lang]map[Msg]string{
 		CliStopHint:      "Press Ctrl+C to stop.",
 		CliStopping:      "Stopping...",
 		CliStopError:     "error while stopping: %v",
+
+		WebHome:          "Home",
+		WebPath:          "Path",
+		WebBack:          "Back",
+		WebBackAria:      "Go back",
+		WebLangButton:    "中",
+		WebSwitchToEN:    "Switch to English",
+		WebSwitchToZH:    "Switch to Chinese",
+		WebUpload:        "Upload",
+		WebUploadFiles:   "Upload files",
+		WebUploadFolder:  "Upload folder",
+		WebNewFolder:     "New folder",
+		WebHide:          "Hide",
+		WebCancelAll:     "Cancel all",
+		WebDownloadZip:   "Download zip",
+		WebSelectAll:     "Select all",
+		WebClearAll:      "Clear",
+		WebClearPick:     "Clear selection",
+		WebSelectedCount: "%d selected",
+		WebSelectItem:    "Select %s",
+		WebDropHere:      "Drop to upload",
+		WebNoShares:      "No shared folders yet",
+		WebSharedFolder:  "Shared folder",
+		WebEmptyFolder:   "This folder is empty",
+		WebFolder:        "Folder",
+		WebDownload:      "Download",
+		WebDelete:        "Delete",
+		WebReadOnly:      "read-only",
+		WebNotConfigured: "Not configured",
+		WebShareCount:    "%d shared folder(s)",
+		WebTruncated:     "Showing the first %d of %d items",
+		WebShowAll:       "Show all",
+		WebErrorTitle:    "This page cannot be opened",
+		WebGoHome:        "Back to shared folders",
+
+		WebUploading:       "Uploading %d/%d",
+		WebUploadCount:     "Upload %d/%d",
+		WebUploadDone:      "Upload complete",
+		WebActiveUploads:   "%d/%d uploading",
+		WebDone:            "Done · %s",
+		WebFailed:          "Failed: %s",
+		WebWaiting:         "Waiting · %s",
+		WebServerDown:      "Service stopped",
+		WebRetrying:        "Retry %d: %s",
+		WebBusy:            "Another device is uploading this file",
+		WebSizeMismatch:    "Server reported a different size",
+		WebResuming:        "Resuming %s",
+		WebFilesFailed:     "%d file(s) failed",
+		WebFilesUploaded:   "Uploaded %d file(s)",
+		WebCancelled:       "Cancelled",
+		WebStalled:         "Transfer stalled",
+		WebReadFailed:      "Cannot read the file",
+		WebConnLost:        "Connection lost",
+		WebCancelAllAsk:    "Cancel all uploads? Data already sent will be deleted from the server.",
+		WebUploadCancelled: "All uploads cancelled",
+		WebConfirmDelete:   "Delete “%s”? This cannot be undone.",
+		WebDeleted:         "Deleted",
+		WebDeleteFailed:    "Delete failed: %s",
+		WebDownloadStarted: "Downloading %s",
+		WebEnterShare:      "Open a shared folder first",
+		WebNewFolderName:   "New folder name",
+		WebCreated:         "Created",
+		WebCreateFailed:    "Create failed: %s",
+		WebZipStarted:      "Packaging %d item(s)…",
+		WebSelectNothing:   "Nothing selected",
+		WebTooManyPicked:   "At most %d items per download",
+		WebUnknownError:    "unknown error",
 	},
 	ZHCN: {
 		ErrServerRunning:     "服务已在运行",
@@ -233,6 +372,73 @@ var catalogue = map[Lang]map[Msg]string{
 		CliStopHint:      "按 Ctrl+C 停止。",
 		CliStopping:      "正在停止…",
 		CliStopError:     "停止时出错：%v",
+
+		WebHome:          "根目录",
+		WebPath:          "路径",
+		WebBack:          "返回",
+		WebBackAria:      "返回上一层",
+		WebLangButton:    "EN",
+		WebSwitchToEN:    "切换到英文",
+		WebSwitchToZH:    "切换到中文",
+		WebUpload:        "上传",
+		WebUploadFiles:   "上传文件",
+		WebUploadFolder:  "上传文件夹",
+		WebNewFolder:     "新建文件夹",
+		WebHide:          "收起",
+		WebCancelAll:     "全部取消",
+		WebDownloadZip:   "打包下载",
+		WebSelectAll:     "全选",
+		WebClearAll:      "取消全选",
+		WebClearPick:     "取消选择",
+		WebSelectedCount: "已选 %d 项",
+		WebSelectItem:    "选择 %s",
+		WebDropHere:      "松开即可上传",
+		WebNoShares:      "还没有共享目录",
+		WebSharedFolder:  "共享目录",
+		WebEmptyFolder:   "这个文件夹是空的",
+		WebFolder:        "文件夹",
+		WebDownload:      "下载",
+		WebDelete:        "删除",
+		WebReadOnly:      "只读",
+		WebNotConfigured: "未配置",
+		WebShareCount:    "%d 个共享目录",
+		WebTruncated:     "仅显示前 %d 项，共 %d 项",
+		WebShowAll:       "显示全部",
+		WebErrorTitle:    "这个页面打不开",
+		WebGoHome:        "回到共享目录",
+
+		WebUploading:       "正在上传 %d/%d",
+		WebUploadCount:     "上传 %d/%d",
+		WebUploadDone:      "上传完成",
+		WebActiveUploads:   "%d/%d 正在上传",
+		WebDone:            "完成 · %s",
+		WebFailed:          "失败：%s",
+		WebWaiting:         "等待中 · %s",
+		WebServerDown:      "服务已停止",
+		WebRetrying:        "第 %d 次重试：%s",
+		WebBusy:            "另一台设备正在上传这个文件",
+		WebSizeMismatch:    "服务端返回的大小不一致",
+		WebResuming:        "继续传输 %s",
+		WebFilesFailed:     "%d 个文件失败",
+		WebFilesUploaded:   "已上传 %d 个文件",
+		WebCancelled:       "已取消",
+		WebStalled:         "传输卡住",
+		WebReadFailed:      "读取文件失败",
+		WebConnLost:        "连接中断",
+		WebCancelAllAsk:    "取消全部上传？已传输的临时数据会从服务端删除。",
+		WebUploadCancelled: "已取消全部上传",
+		WebConfirmDelete:   "删除“%s”？此操作不可恢复。",
+		WebDeleted:         "已删除",
+		WebDeleteFailed:    "删除失败：%s",
+		WebDownloadStarted: "开始下载 %s",
+		WebEnterShare:      "先进入一个共享目录",
+		WebNewFolderName:   "新建文件夹名称",
+		WebCreated:         "已创建",
+		WebCreateFailed:    "创建失败：%s",
+		WebZipStarted:      "正在打包 %d 项…",
+		WebSelectNothing:   "还没有选择任何项目",
+		WebTooManyPicked:   "一次最多打包 %d 项",
+		WebUnknownError:    "未知错误",
 	},
 }
 

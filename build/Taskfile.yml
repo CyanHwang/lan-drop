@@ -247,9 +247,10 @@ tasks:
         OBFUSCATED=true obfuscated build via garble (requires garble installed)
         EXTRA_TAGS      additional comma-separated build tags
     # No frontend dependency: -tags server compiles main_server.go, which
-    # embeds mobile.html directly and never embeds frontend/dist. Passing the
-    # server build flags to generate:bindings would wipe frontend/bindings
-    # (there are no Wails services in that build) and break the desktop UI.
+    # embeds the page templates and assets directly and never embeds
+    # frontend/dist. Passing the server build flags to generate:bindings would
+    # wipe frontend/bindings (there are no Wails services in that build) and
+    # break the desktop UI.
     preconditions:
       - sh: '{{if eq .OBFUSCATED "true"}}command -v garble >/dev/null 2>&1{{else}}true{{end}}'
         msg: "garble is required for obfuscated builds. Install it with: go install mvdan.cc/garble@v0.16.0 (requires Go 1.24+). See https://github.com/burrowers/garble/releases for version/toolchain compatibility."

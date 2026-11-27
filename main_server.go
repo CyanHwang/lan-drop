@@ -74,7 +74,7 @@ func main() {
 		Host:         host,
 		StrictPort:   !*autoPort,
 		ReadOnly:     *readOnly,
-		Lang:         lang,
+		Lang:         configuredLang(cfg.Language),
 		ShowHidden:   cfg.ShowHidden,
 		ShowDotfiles: cfg.ShowDotfiles,
 		Filter:       cfg.Filter,
@@ -110,6 +110,17 @@ func resolveShares(flags shareList, cfg config.Config) []transfer.Share {
 		out = append(out, shareFor(p))
 	}
 	return out
+}
+
+// configuredLang reports the language the host actually chose, or "" when the
+// value is only the OS guess this process would have made anyway. An empty
+// Lang lets the browser's own preference decide, which is what a headless
+// deployment on a shared LAN wants.
+func configuredLang(raw string) i18n.Lang {
+	if l, ok := i18n.Normalize(raw); ok {
+		return l
+	}
+	return ""
 }
 
 func shareFor(path string) transfer.Share {
