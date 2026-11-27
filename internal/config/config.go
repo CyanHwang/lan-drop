@@ -23,8 +23,12 @@ type Config struct {
 	// ShowDotfiles lists entries whose name starts with a dot.
 	ShowDotfiles bool `json:"showDotfiles"`
 	// Filter is the user's exclusion list; see transfer.ParseFilter.
-	Filter string           `json:"filter"`
-	Shares []transfer.Share `json:"shares"`
+	Filter string `json:"filter"`
+	// Thumbnails turns the browser listing's preview images on. Off by
+	// default: decoding is the one thing this server does that costs real CPU,
+	// and a NAS or a Raspberry Pi should not start doing it unasked.
+	Thumbnails bool             `json:"thumbnails"`
+	Shares     []transfer.Share `json:"shares"`
 }
 
 // FileName is the portable settings file kept next to the executable.
@@ -87,7 +91,7 @@ func Load() Config {
 			if _, err := os.Stat(old); err == nil {
 				cfg := loadFile(old)
 				if len(cfg.Shares) > 0 || cfg.Language != "" || cfg.Filter != "" ||
-					cfg.ShowHidden || cfg.ShowDotfiles {
+					cfg.ShowHidden || cfg.ShowDotfiles || cfg.Thumbnails {
 					_ = Save(cfg)
 					return cfg
 				}
@@ -144,6 +148,7 @@ func loadFile(p string) Config {
 				}
 				cfg.ShowHidden = parseBool(kv["show_hidden"])
 				cfg.ShowDotfiles = parseBool(kv["show_dotfiles"])
+				cfg.Thumbnails = parseBool(kv["thumbnails"])
 				cfg.Filter = kv["filter"]
 			} else if raw := kv["path"]; raw != "" {
 				path := filepath.Clean(raw)
@@ -217,6 +222,7 @@ func saveTo(p string, c Config) error {
 	fmt.Fprintf(&b, "language = %s\r\n", lang)
 	fmt.Fprintf(&b, "show_hidden = %t\r\n", c.ShowHidden)
 	fmt.Fprintf(&b, "show_dotfiles = %t\r\n", c.ShowDotfiles)
+	fmt.Fprintf(&b, "thumbnails = %t\r\n", c.Thumbnails)
 	fmt.Fprintf(&b, "filter = %s\r\n\r\n", c.Filter)
 
 	for i, sh := range c.Shares {

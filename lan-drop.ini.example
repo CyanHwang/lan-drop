@@ -19,6 +19,13 @@
 ;
 ;   Both filters apply to folders as well as files, and both default to false.
 ;
+;   thumbnails = true | false
+;     Show picture previews in the browser listing. Off by default: decoding
+;     images costs CPU, so the desktop window owns the switch. Previews are
+;     cached in the OS cache directory for 7 days; turning this off clears
+;     that cache. Image formats are built in. Video and HEIC previews also
+;     work when ffmpeg is available on PATH.
+;
 ;   filter = *.tmp, node_modules
 ;     Entries to hide from the listing. Separate with commas or semicolons.
 ;     Each entry is a name or a glob (* and ?); start it with re: to use a
@@ -33,6 +40,7 @@
 language = en
 show_hidden = false
 show_dotfiles = false
+thumbnails = false
 filter =
 
 [share_1]

@@ -723,6 +723,34 @@ button:disabled {
   margin-top: 14px;
 }
 
+/* Preview switch. Kept separate from the listing filters: it controls a cache
+   directory and a CPU budget, not what the listing contains. */
+.thumb-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 12px;
+}
+
+.thumb-clear {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.thumb-clear:hover { text-decoration: underline; }
+
+.thumb-note {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .check {
   display: inline-flex;
   align-items: center;

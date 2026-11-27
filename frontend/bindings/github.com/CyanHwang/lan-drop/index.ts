@@ -7,5 +7,6 @@ export {
 };
 
 export type {
+    ThumbInfo,
     ViewOptions
 } from "./models.js";

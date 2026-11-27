@@ -90,11 +90,15 @@ type viewEntry struct {
 	Rel          string
 	Href         string
 	DownloadHref string
-	IsDir        bool
-	Icon         string
-	Sub          string
-	Delay        string
-	AriaSelect   string
+	// ThumbHref is empty unless previews are on and this file can be decoded.
+	// The version in the URL is the file's size and mtime: it exists for the
+	// browser's cache, not for the server's.
+	ThumbHref  string
+	IsDir      bool
+	Icon       string
+	Sub        string
+	Delay      string
+	AriaSelect string
 }
 
 type viewRoot struct {
@@ -581,6 +585,11 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 			ve.Icon = iconFor(e.Name)
 			ve.DownloadHref = "/api/download?share=" + url.QueryEscape(sh.ID) +
 				"&path=" + url.QueryEscape(rel)
+			if s.thumbsOn.Load() && previewable(e.Name, s.ffmpegPath()) {
+				ve.ThumbHref = "/api/thumb?share=" + url.QueryEscape(sh.ID) +
+					"&path=" + url.QueryEscape(rel) +
+					"&v=" + strconv.FormatInt(e.Size, 10) + "-" + strconv.FormatInt(e.ModTime, 10)
+			}
 		}
 		p.Entries = append(p.Entries, ve)
 	}

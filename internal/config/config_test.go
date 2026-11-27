@@ -251,3 +251,21 @@ func TestLegacyINIMigration(t *testing.T) {
 		t.Fatalf("second load = %q, want en from the new file", again.Language)
 	}
 }
+
+// The preview switch has to survive a save/load round trip and default to off
+// when the key is absent, so an upgrade never starts decoding images unasked.
+func TestThumbnailsRoundTripAndDefault(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "lan-drop.ini")
+	if err := saveTo(p, Config{Language: "en", Thumbnails: true}); err != nil {
+		t.Fatal(err)
+	}
+	if !loadFile(p).Thumbnails {
+		t.Fatal("thumbnails = true was lost")
+	}
+	if err := saveTo(p, Config{Language: "en"}); err != nil {
+		t.Fatal(err)
+	}
+	if loadFile(p).Thumbnails {
+		t.Fatal("thumbnails should default to false")
+	}
+}

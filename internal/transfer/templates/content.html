@@ -20,7 +20,7 @@
     <li data-rel="{{.Rel}}" data-dir="{{if .IsDir}}1{{else}}0{{end}}" style="animation-delay:{{.Delay}}s">
       <span class="pick-zone" data-pick="{{.Rel}}">
         <button type="button" class="pick" aria-pressed="false" aria-label="{{.AriaSelect}}"><i>{{template "icoCheck"}}</i></button>
-        <span class="ico{{if .IsDir}} dir{{end}}">{{template "icon" .Icon}}</span>
+        <span class="ico{{if .IsDir}} dir{{end}}">{{template "icon" .Icon}}{{if .ThumbHref}}<img class="thumb" src="{{.ThumbHref}}" alt="" loading="lazy" decoding="async" onerror="this.remove()">{{end}}</span>
       </span>
       {{if .IsDir}}
       <a class="meta" href="{{.Href}}"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></a>

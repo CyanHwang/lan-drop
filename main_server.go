@@ -47,6 +47,7 @@ func main() {
 		configPath = flag.String("config", "", i18n.T(helpLang, i18n.CliOptConfig))
 		readOnly   = flag.Bool("readonly", false, i18n.T(helpLang, i18n.CliOptReadOnly))
 		autoPort   = flag.Bool("auto-port", false, i18n.T(helpLang, i18n.CliOptAutoPort))
+		thumbs     = flag.Bool("thumbs", false, i18n.T(helpLang, i18n.CliOptThumbs))
 		shares     shareList
 	)
 	flag.Var(&shares, "share", i18n.T(helpLang, i18n.CliOptShare))
@@ -78,6 +79,7 @@ func main() {
 		ShowHidden:   cfg.ShowHidden,
 		ShowDotfiles: cfg.ShowDotfiles,
 		Filter:       cfg.Filter,
+		Thumbnails:   cfg.Thumbnails || *thumbs,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

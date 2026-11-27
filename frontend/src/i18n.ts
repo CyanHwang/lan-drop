@@ -32,6 +32,12 @@ const en: Dict = {
   'options.showHidden': 'Show hidden files',
   'options.showDotfiles': 'Show dot-prefixed files',
   'options.appliesTo': 'Applies to both files and folders',
+  'options.thumbnails': 'Thumbnail previews',
+  'options.thumbnailsHint':
+    'The browser listing shows a picture for images, and for video when ffmpeg is installed. Previews are cached for 7 days; turning this off deletes them.',
+  'options.thumbFfmpeg': 'ffmpeg found — video and HEIC previews available',
+  'options.thumbNoFfmpeg': 'No ffmpeg on PATH — video and HEIC previews unavailable',
+  'options.clearCache': 'Clear cache',
   'options.filter': 'Filter out',
   'options.filterHint':
     'Comma or semicolon separated. Each entry is a name or a glob like *.tmp. Start an entry with re: to use a regular expression.',
@@ -93,6 +99,12 @@ const zh: Dict = {
   'options.showHidden': '显示隐藏文件',
   'options.showDotfiles': '显示以 . 开头的文件',
   'options.appliesTo': '对文件和文件夹同时生效',
+  'options.thumbnails': '缩略图预览',
+  'options.thumbnailsHint':
+    '浏览器列表里直接显示图片预览；装有 ffmpeg 时视频也能预览。预览缓存保留 7 天，关闭开关会立即删除缓存。',
+  'options.thumbFfmpeg': '已检测到 ffmpeg — 支持视频与 HEIC 预览',
+  'options.thumbNoFfmpeg': 'PATH 中没有 ffmpeg — 视频与 HEIC 无法预览',
+  'options.clearCache': '清除缓存',
   'options.filter': '过滤掉',
   'options.filterHint':
     '用逗号或分号分隔。每项是名称或 *.tmp 这样的通配符；re: 开头表示正则表达式。',

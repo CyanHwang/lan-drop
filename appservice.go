@@ -127,6 +127,63 @@ func (a *AppService) SetViewOptions(o ViewOptions) (ViewOptions, error) {
 	return o, nil
 }
 
+// ThumbInfo describes the preview-image feature for the desktop window: whether
+// it is on, whether ffmpeg was found, and what the cache currently occupies.
+// The window needs all three to decide what to render — the cache can hold
+// files even while the feature is off, and clearing them is a separate action.
+type ThumbInfo struct {
+	Enabled bool  `json:"enabled"`
+	Ffmpeg  bool  `json:"ffmpeg"`
+	Files   int   `json:"files"`
+	Bytes   int64 `json:"bytes"`
+}
+
+// ThumbInfo reports the current preview settings and cache usage.
+func (a *AppService) ThumbInfo() ThumbInfo {
+	cfg := config.Load()
+	files, bytes := transfer.ThumbCacheStats()
+	return ThumbInfo{
+		Enabled: cfg.Thumbnails,
+		Ffmpeg:  transfer.FfmpegPath() != "",
+		Files:   files,
+		Bytes:   bytes,
+	}
+}
+
+// SetThumbnails persists the switch and applies it immediately. Turning it off
+// also deletes the cache: the setting is the user saying they do not want this
+// server decoding images, and leaving gigabytes of previews behind would
+// contradict that. It works with the service stopped — the value is read again
+// on the next Start.
+func (a *AppService) SetThumbnails(on bool) (ThumbInfo, error) {
+	cfg := config.Load()
+	cfg.Thumbnails = on
+	if err := config.Save(cfg); err != nil {
+		return ThumbInfo{}, a.err(i18n.ErrConfigWrite, err)
+	}
+
+	a.mu.Lock()
+	srv := a.srv
+	a.mu.Unlock()
+	if srv != nil {
+		srv.SetThumbnails(on)
+	}
+	if !on {
+		_, _ = transfer.PurgeThumbCache()
+	}
+	return a.ThumbInfo(), nil
+}
+
+// ClearThumbCache deletes generated previews without touching the switch. The
+// window offers it while the feature is off, which is when a leftover cache is
+// otherwise invisible.
+func (a *AppService) ClearThumbCache() (ThumbInfo, error) {
+	if _, err := transfer.PurgeThumbCache(); err != nil {
+		return a.ThumbInfo(), err
+	}
+	return a.ThumbInfo(), nil
+}
+
 // Language returns the active UI language tag ("en" or "zh-Hans").
 func (a *AppService) Language() string {
 	return string(a.L())
@@ -256,6 +313,7 @@ func (a *AppService) Start(port int) (transfer.Info, error) {
 		ShowHidden:   cfg.ShowHidden,
 		ShowDotfiles: cfg.ShowDotfiles,
 		Filter:       cfg.Filter,
+		Thumbnails:   cfg.Thumbnails,
 	})
 }
 

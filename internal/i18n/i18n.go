@@ -86,6 +86,7 @@ const (
 	CliOptConfig     Msg = "cli.optConfig"
 	CliOptReadOnly   Msg = "cli.optReadOnly"
 	CliOptAutoPort   Msg = "cli.optAutoPort"
+	CliOptThumbs     Msg = "cli.optThumbs"
 	CliExample       Msg = "cli.example"
 	CliNoShares      Msg = "cli.noShares"
 	CliBadAddr       Msg = "cli.badAddr"
@@ -227,6 +228,7 @@ var catalogue = map[Lang]map[Msg]string{
 		CliOptConfig:     "config file path (default: lan-drop.ini next to the executable)",
 		CliOptReadOnly:   "read-only mode: reject uploads, mkdir and delete",
 		CliOptAutoPort:   "scan forward when the port is taken (default: fail loudly)",
+		CliOptThumbs:     "generate thumbnail previews for images and videos (needs ffmpeg for video)",
 		CliExample:       "Examples:\n  %s -share /data/photos -share /data/docs\n  %s -addr 0.0.0.0:9000 -config /etc/lan-drop/lan-drop.ini -readonly",
 		CliNoShares:      "error: no shared folders.\n  Pass -share /path/to/dir, or add one to lan-drop.ini and retry.",
 		CliBadAddr:       "error: invalid listen address %q: %v",
@@ -361,6 +363,7 @@ var catalogue = map[Lang]map[Msg]string{
 		CliOptConfig:     "配置文件路径，默认为可执行文件同目录的 lan-drop.ini",
 		CliOptReadOnly:   "只读模式：禁止上传、新建文件夹和删除",
 		CliOptAutoPort:   "端口被占用时自动向后寻找可用端口（默认直接报错）",
+		CliOptThumbs:     "生成图片和视频的缩略图预览（视频需要 ffmpeg）",
 		CliExample:       "示例：\n  %s -share /data/photos -share /data/docs\n  %s -addr 0.0.0.0:9000 -config /etc/lan-drop/lan-drop.ini -readonly",
 		CliNoShares:      "错误：没有可用的共享目录。\n  用 -share /path/to/dir 指定，或在 lan-drop.ini 中配置后重试。",
 		CliBadAddr:       "错误：无效的监听地址 %q：%v",

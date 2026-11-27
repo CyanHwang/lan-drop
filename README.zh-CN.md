@@ -178,6 +178,18 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 用 `-tags server` 启动且 `lan-drop.ini` 里没有写死语言时，浏览器端改用 `Accept-Language`，
 中文手机会直接看到中文。
 
+### 缩略图预览
+
+默认关闭。在桌面窗口的选项区打开后，浏览器列表里的图片和视频会直接显示方形预览；开关状态写在 `lan-drop.ini` 的 `thumbnails`，服务启动与否都能改，关闭时会立即清除缓存。
+
+- JPEG / PNG / GIF / WebP / BMP / TIFF 由程序自己解码，无外部依赖
+- PATH 里有 `ffmpeg` 时额外支持视频、HEIC/HEIF、AVIF 预览；没有就退回通用图标
+- 缓存放在系统缓存目录（`%LOCALAPPDATA%\lan-drop\thumbs` / `~/.cache/lan-drop/thumbs`），7 天未用或总量超过 256 MB 时自动淘汰。用户清理系统缓存同样会删掉它，不影响任何原文件
+- 缓存键是「路径 + 大小 + 修改时间」，覆盖同名文件会自然换图。唯一看不出来的是「大小和修改时间都完全相同」的替换（保留时间戳的拷贝、FAT 的 2 秒精度），此时旧图标会留到文件下次被改动
+- 单张约 4 KB，并发解码限制为 2，不会抢传输的 CPU
+
+`-tags server` 部署可以在 ini 里打开，或加 `-thumbs` 强制打开。
+
 ## HTTP 接口
 
 手机端页面和所有接口由同一个监听端口提供，没有额外依赖。
@@ -187,6 +199,7 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 | GET | `/` | 共享目录选择页（只有一个共享时直接跳转） |
 | GET | `/s/{share}/{dir}` | 服务端渲染的目录页 |
 | GET | `/static/` | 样式与脚本，按构建号长期缓存 |
+| GET | `/api/thumb?share=&path=&v=` | 方形缩略图；`v` 是文件大小与修改时间，仅用于浏览器缓存 |
 | GET | `/api/list?share=&dir=` | 目录列表；`share` 为空时返回虚拟根 |
 | GET | `/api/download?share=&path=` | 单文件下载，支持 `Range` |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | 批量打包；`paths` 可重复，POST 用表单体提交大量选择 |

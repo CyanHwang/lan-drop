@@ -110,6 +110,9 @@ type StartOptions struct {
 	// Filter is the user's exclusion list, e.g. "*.tmp, node_modules". See
 	// ParseFilter for the accepted syntax.
 	Filter string
+	// Thumbnails generates preview images for the browser listing. Off by
+	// default: decoding costs CPU the host may not want to spend.
+	Thumbnails bool
 }
 
 // Server owns the LAN-facing HTTP listener. It is deliberately separate from
@@ -137,6 +140,13 @@ type Server struct {
 	showHidden   atomic.Bool
 	showDotfiles atomic.Bool
 	filter       atomic.Value // filterSet
+
+	// Preview images. Off unless the user asked for them; ffmpeg is resolved
+	// once when they are turned on, because it only changes if the user
+	// installs it mid-session.
+	thumbsOn atomic.Bool
+	ffmpeg   atomic.Value // string
+	thumbs   *thumbCache
 
 	ips ipCache
 
@@ -180,8 +190,9 @@ func (c *ipCache) get() []string {
 
 // New builds a server. emit may be nil; it is only used to notify the desktop UI.
 func New(emit func(string, any)) *Server {
-	s := &Server{emit: emit}
+	s := &Server{emit: emit, thumbs: newThumbCache()}
 	s.lang.Store(i18n.EN)
+	s.ffmpeg.Store("")
 	return s
 }
 
@@ -303,6 +314,7 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	mux.HandleFunc("POST /api/mkdir", s.handleMkdir)
 	mux.HandleFunc("DELETE /api/file", s.handleDelete)
 	mux.HandleFunc("GET /api/info", s.handleInfo)
+	mux.HandleFunc("GET /api/thumb", s.handleThumb)
 
 	// The browser UI. Paths are real, not fragments: a listing can be
 	// refreshed, bookmarked and opened from the address bar.
@@ -330,6 +342,7 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	s.showHidden.Store(opt.ShowHidden)
 	s.showDotfiles.Store(opt.ShowDotfiles)
 	s.filter.Store(ParseFilter(opt.Filter))
+	s.SetThumbnails(opt.Thumbnails)
 
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -360,6 +373,9 @@ func (s *Server) sweepParts(shares []Share, stop <-chan struct{}) {
 		for _, sh := range shares {
 			removeStaleParts(sh.Path, cutoff)
 		}
+		// Previews for deleted folders would otherwise sit in the cache until
+		// someone cleared it by hand.
+		s.thumbs.sweep()
 		select {
 		case <-stop:
 			return

@@ -25,6 +25,13 @@ type ViewOptions = {
   filter: string
 }
 
+type ThumbInfo = {
+  enabled: boolean
+  ffmpeg: boolean
+  files: number
+  bytes: number
+}
+
 type Progress = {
   id: string
   name: string
@@ -45,6 +52,7 @@ type Progress = {
 
 const EMPTY_INFO: Info = { running: false, port: 0, urls: [], since: 0, readOnly: false, shares: [] }
 const EMPTY_OPTIONS: ViewOptions = { showHidden: false, showDotfiles: false, filter: '' }
+const EMPTY_THUMBS: ThumbInfo = { enabled: false, ffmpeg: false, files: 0, bytes: 0 }
 
 function normalizeOptions(raw: unknown): ViewOptions {
   const v = (raw ?? {}) as Partial<ViewOptions>
@@ -52,6 +60,16 @@ function normalizeOptions(raw: unknown): ViewOptions {
     showHidden: Boolean(v.showHidden),
     showDotfiles: Boolean(v.showDotfiles),
     filter: typeof v.filter === 'string' ? v.filter : '',
+  }
+}
+
+function normalizeThumbs(raw: unknown): ThumbInfo {
+  const v = (raw ?? {}) as Partial<ThumbInfo>
+  return {
+    enabled: Boolean(v.enabled),
+    ffmpeg: Boolean(v.ffmpeg),
+    files: typeof v.files === 'number' ? v.files : 0,
+    bytes: typeof v.bytes === 'number' ? v.bytes : 0,
   }
 }
 
@@ -226,6 +244,7 @@ export default function App() {
   const [items, setItems] = useState<Progress[]>([])
   const [copied, setCopied] = useState('')
   const [opts, setOpts] = useState<ViewOptions>(EMPTY_OPTIONS)
+  const [thumbs, setThumbs] = useState<ThumbInfo>(EMPTY_THUMBS)
   // Kept separate from opts so typing does not hit the backend on every key.
   const [filterDraft, setFilterDraft] = useState('')
   const [lang, setLang] = useState<Lang>('en')
@@ -263,6 +282,10 @@ export default function App() {
         setOpts(next)
         setFilterDraft(next.filter)
       })
+      .catch(() => undefined)
+
+    AppService.ThumbInfo()
+      .then((raw: unknown) => setThumbs(normalizeThumbs(raw)))
       .catch(() => undefined)
 
     AppService.Status()
@@ -418,6 +441,34 @@ export default function App() {
     }
   }, [filterDraft, opts])
 
+  // The switch is service-wide, not per-listing, and it works with the service
+  // stopped: the value is persisted and read again on the next Start.
+  const toggleThumbs = useCallback(async () => {
+    const previous = thumbs
+    // Optimistic: the checkbox already moved, and a revert is cheaper than a
+    // spinner on something that writes one line to an ini file.
+    setThumbs({ ...previous, enabled: !previous.enabled })
+    try {
+      setThumbs(normalizeThumbs(await AppService.SetThumbnails(!previous.enabled)))
+      setError('')
+    } catch (e) {
+      setThumbs(previous)
+      setError(String((e as Error)?.message ?? e))
+    }
+  }, [thumbs])
+
+  // Offered while the switch is off, which is the only time a leftover cache
+  // would otherwise be invisible. The button disappears once the cache is
+  // empty, which is feedback enough.
+  const clearThumbCache = useCallback(async () => {
+    try {
+      setThumbs(normalizeThumbs(await AppService.ClearThumbCache()))
+      setError('')
+    } catch (e) {
+      setError(String((e as Error)?.message ?? e))
+    }
+  }, [])
+
   const changeLang = useCallback(async (next: Lang) => {
     try {
       const applied = await AppService.SetLanguage(next)
@@ -537,6 +588,19 @@ export default function App() {
               <input type="checkbox" checked={opts.showDotfiles} onChange={() => toggleOption('showDotfiles')} />
               <span>{t('options.showDotfiles')}</span>
             </label>
+          </div>
+
+          <div className="thumb-opts">
+            <label className="check" title={t('options.thumbnailsHint')}>
+              <input type="checkbox" checked={thumbs.enabled} onChange={toggleThumbs} />
+              <span>{t('options.thumbnails')}</span>
+            </label>
+            {!thumbs.enabled && thumbs.bytes > 0 && (
+              <button className="thumb-clear" type="button" onClick={clearThumbCache}>
+                {t('options.clearCache')} · {fmtSize(thumbs.bytes)}
+              </button>
+            )}
+            <div className="thumb-note">{thumbs.ffmpeg ? t('options.thumbFfmpeg') : t('options.thumbNoFfmpeg')}</div>
           </div>
 
           <label className="filter-field" title={t('options.filterHint')}>

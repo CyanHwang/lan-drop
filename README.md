@@ -180,6 +180,18 @@ Two ways to switch:
 The browser starts from the host's configured language. A manual choice in that browser wins, and it never writes to the host's config.
 On a `-tags server` build whose `lan-drop.ini` names no language, the browser falls back to `Accept-Language`, so a Chinese phone opens in Chinese.
 
+### Thumbnail previews
+
+Off by default. Turn them on in the desktop window's options area and the browser listing shows square previews for images and videos. The switch is persisted as `thumbnails` in `lan-drop.ini`, works whether the service is running or not, and clears the cache when turned off.
+
+- JPEG / PNG / GIF / WebP / BMP / TIFF are decoded in-process; no extra component
+- With `ffmpeg` on PATH, video, HEIC/HEIF and AVIF previews are added; without it those rows keep the generic icon
+- Previews live in the OS cache directory (`%LOCALAPPDATA%\lan-drop\thumbs` / `~/.cache/lan-drop/thumbs`). They are evicted after 7 days or when the directory passes 256 MB. Clearing the system cache removes them too, without touching any original file
+- The cache key is path + size + modification time, so overwriting a file with the same name just generates a new preview. The one case it cannot see is a replacement with both the same size and the same timestamp (timestamp-preserving copies, FAT's 2-second granularity); the old icon then lasts until the file changes again
+- Each preview is ~4 KB and decoding is limited to two workers, so transfers keep their CPU
+
+On a `-tags server` build, set the ini key or pass `-thumbs` to force it on.
+
 ## HTTP API
 
 The browser page and every endpoint share one port. No extra services.
@@ -189,6 +201,7 @@ The browser page and every endpoint share one port. No extra services.
 | GET | `/` | Share picker (a single share redirects straight to it) |
 | GET | `/s/{share}/{dir}` | Rendered directory listing |
 | GET | `/static/` | Stylesheet and script, immutable-cached per build |
+| GET | `/api/thumb?share=&path=&v=` | Square preview; `v` is size and mtime, used only as a browser cache key |
 | GET | `/api/list?share=&dir=` | Directory listing. Empty `share` returns the virtual root |
 | GET | `/api/download?share=&path=` | Single-file download, supports `Range` |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | Batch zip. `paths` repeats; POST accepts a form body for large selections |

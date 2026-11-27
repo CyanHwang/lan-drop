@@ -32,6 +32,15 @@ export function AddShare(): $CancellablePromise<transfer$0.Share[] | null> {
 }
 
 /**
+ * ClearThumbCache deletes generated previews without touching the switch. The
+ * window offers it while the feature is off, which is when a leftover cache is
+ * otherwise invisible.
+ */
+export function ClearThumbCache(): $CancellablePromise<$models.ThumbInfo> {
+    return $Call.ByID(3916814937);
+}
+
+/**
  * CopyText puts arbitrary text on the system clipboard. The WebView clipboard
  * API is unreliable without a secure origin, so the UI goes through Go.
  */
@@ -97,6 +106,17 @@ export function SetLanguage(tag: string): $CancellablePromise<string> {
 }
 
 /**
+ * SetThumbnails persists the switch and applies it immediately. Turning it off
+ * also deletes the cache: the setting is the user saying they do not want this
+ * server decoding images, and leaving gigabytes of previews behind would
+ * contradict that. It works with the service stopped — the value is read again
+ * on the next Start.
+ */
+export function SetThumbnails(on: boolean): $CancellablePromise<$models.ThumbInfo> {
+    return $Call.ByID(812782483, on);
+}
+
+/**
  * SetViewOptions persists the filters and, when the server is already running,
  * applies them without a restart — the next listing request picks them up.
  */
@@ -124,6 +144,13 @@ export function Status(): $CancellablePromise<transfer$0.Info> {
 
 export function Stop(): $CancellablePromise<transfer$0.Info> {
     return $Call.ByID(2098087154);
+}
+
+/**
+ * ThumbInfo reports the current preview settings and cache usage.
+ */
+export function ThumbInfo(): $CancellablePromise<$models.ThumbInfo> {
+    return $Call.ByID(54620194);
 }
 
 /**

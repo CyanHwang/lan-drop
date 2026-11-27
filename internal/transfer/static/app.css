@@ -366,6 +366,8 @@ ul.files li.sel .name { font-weight: 500; }
 ul.files li[data-dir="1"]:hover .name { color: var(--accent); }
 
 .ico {
+  position: relative;
+  overflow: hidden;
   width: 38px; height: 38px;
   border-radius: 11px;
   display: grid; place-items: center;
@@ -374,6 +376,17 @@ ul.files li[data-dir="1"]:hover .name { color: var(--accent); }
   color: var(--muted);
   flex-shrink: 0;
   transition: background-color .2s, box-shadow .2s, color .2s;
+}
+/* The preview covers the icon once it arrives, so the row never shows an empty
+   box: the generic glyph is what you see while loading and after a failure. */
+.ico .thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-2);
 }
 .ico.dir {
   color: var(--accent);
