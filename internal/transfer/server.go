@@ -85,6 +85,8 @@ type Entry struct {
 	IsDir   bool   `json:"isDir"`
 	Size    int64  `json:"size"`
 	ModTime int64  `json:"modTime"`
+	// Created is zero when the filesystem does not expose a birth time.
+	Created int64 `json:"created"`
 }
 
 // StartOptions tunes how the listener comes up.

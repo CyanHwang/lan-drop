@@ -193,7 +193,20 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := st.Name()
-	w.Header().Set("Content-Disposition", contentDisposition(name))
+	// SVG with inline disposition would run in the page's origin if someone
+	// opened the URL directly. The viewer loads it through <img>, which is
+	// sandboxed and unaffected by Content-Disposition, so keep the attachment.
+	if r.URL.Query().Get("inline") == "1" && !strings.EqualFold(filepath.Ext(name), ".svg") {
+		// The in-page viewer needs the bytes, not a download prompt. The name
+		// stays in the header so a "save as" from anywhere still works.
+		w.Header().Set("Content-Disposition",
+			"inline; filename*=UTF-8''"+url.PathEscape(name))
+		if ct := inlineContentType(name); ct != "" {
+			w.Header().Set("Content-Type", ct)
+		}
+	} else {
+		w.Header().Set("Content-Disposition", contentDisposition(name))
+	}
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	dir := path.Dir(rel)
@@ -673,6 +686,30 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	// the UI, so without this it would sit in the share forever, invisible.
 	removePart(abs)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// inlineContentType pins the MIME type of the formats the viewer understands.
+// ServeContent guesses from the extension, but a LAN box may not have a mime
+// database for .md or the Office types, and nosniff then turns them into
+// application/octet-stream.
+func inlineContentType(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".md", ".markdown":
+		return "text/markdown; charset=utf-8"
+	case ".txt", ".log", ".csv", ".json":
+		return "text/plain; charset=utf-8"
+	case ".svg":
+		return "image/svg+xml"
+	case ".pdf":
+		return "application/pdf"
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".xls":
+		return "application/vnd.ms-excel"
+	}
+	return ""
 }
 
 func contentDisposition(name string) string {

@@ -64,6 +64,33 @@
 <div class="drop-hint" id="dropHint" hidden><span>{{.DropHere}}</span></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <form id="zipForm" method="post" action="/api/download/zip" hidden></form>
+
+<div class="row-menu" id="rowMenu" role="menu" hidden>
+  <button id="menuView" type="button" role="menuitem">{{template "icoEye"}}<span>{{.View}}</span></button>
+  <button id="menuOpen" type="button" role="menuitem">{{template "icoDir"}}<span>{{.OpenFolder}}</span></button>
+  <button id="menuDownload" type="button" role="menuitem">{{template "icoDownload"}}<span>{{.Download}}</span></button>
+  {{if .CanWrite}}<button id="menuDelete" class="danger" type="button" role="menuitem">{{template "icoDelete"}}<span>{{.Delete}}</span></button>{{end}}
+</div>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="{{.View}}" hidden>
+  <div class="viewer-bar">
+    <span class="viewer-name" id="viewerName"></span>
+    <span class="viewer-tools" id="viewerTools" hidden>
+      <button type="button" id="zoomOut" aria-label="{{.ZoomOut}}" title="{{.ZoomOut}}">−</button>
+      <span class="viewer-pct" id="zoomPct">100%</span>
+      <button type="button" id="zoomIn" aria-label="{{.ZoomIn}}" title="{{.ZoomIn}}">+</button>
+      <button type="button" id="zoomFit" aria-label="{{.ZoomFit}}" title="{{.ZoomFit}}">⤢</button>
+    </span>
+    <button type="button" class="viewer-close" id="viewerClose" aria-label="{{.Close}}" title="{{.Close}}">{{template "icoClose"}}</button>
+  </div>
+  <div class="viewer-stage" id="viewerStage">
+    <img id="viewerImg" alt="" hidden>
+    <div id="viewerDoc" class="viewer-doc" hidden></div>
+    <iframe id="viewerFrame" title="{{.View}}" hidden></iframe>
+  </div>
+  <div class="viewer-meta" id="viewerMeta"></div>
+</div>
+
 <script>window.__T={{.Runtime}};</script>
 <script src="/static/app.js?v={{.Build}}" defer></script>
 </body>

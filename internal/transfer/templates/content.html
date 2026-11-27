@@ -17,7 +17,7 @@
 {{else if eq .Mode "files"}}
   <ul class="files" id="fileList"{{if .Empty}} hidden{{end}}>
     {{range .Entries}}
-    <li data-rel="{{.Rel}}" data-dir="{{if .IsDir}}1{{else}}0{{end}}" style="animation-delay:{{.Delay}}s">
+    <li data-rel="{{.Rel}}" data-dir="{{if .IsDir}}1{{else}}0{{end}}" data-size="{{.SizeText}}" data-created="{{.CreatedText}}" data-modified="{{.ModifiedText}}" data-view="{{if .Viewable}}1{{else}}0{{end}}" style="animation-delay:{{.Delay}}s">
       <span class="pick-zone" data-pick="{{.Rel}}">
         <button type="button" class="pick" aria-pressed="false" aria-label="{{.AriaSelect}}"><i>{{template "icoCheck"}}</i></button>
         <span class="ico{{if .IsDir}} dir{{end}}">{{template "icon" .Icon}}{{if .ThumbHref}}<img class="thumb" src="{{.ThumbHref}}" alt="" loading="lazy" decoding="async" onerror="this.remove()">{{end}}</span>
@@ -28,8 +28,7 @@
       <span class="meta"><span class="name">{{.Name}}</span><span class="sub">{{.Sub}}</span></span>
       {{end}}
       <span class="row-actions">
-        {{if not .IsDir}}<a class="act-btn dl" href="{{.DownloadHref}}" download aria-label="{{$.Download}}" title="{{$.Download}}">{{template "icoDownload"}}</a>{{end}}
-        {{if $.CanWrite}}<button class="act-btn del" type="button" data-del="{{.Rel}}" aria-label="{{$.Delete}}" title="{{$.Delete}}">{{template "icoDelete"}}</button>{{end}}
+        <button class="act-btn more" type="button" data-more="{{.Rel}}" aria-label="{{$.More}}" title="{{$.More}}" aria-haspopup="menu" aria-expanded="false">{{template "icoMore"}}</button>
       </span>
     </li>
     {{end}}

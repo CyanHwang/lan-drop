@@ -130,6 +130,9 @@ const (
 	WebFolder        Msg = "web.folder"
 	WebDownload      Msg = "web.download"
 	WebDelete        Msg = "web.delete"
+	WebMore          Msg = "web.more"
+	WebView          Msg = "web.view"
+	WebOpenFolder    Msg = "web.openFolder"
 	WebReadOnly      Msg = "web.readOnly"
 	WebNotConfigured Msg = "web.notConfigured"
 	WebShareCount    Msg = "web.shareCount"
@@ -170,6 +173,18 @@ const (
 	WebSelectNothing   Msg = "web.selectNothing"
 	WebTooManyPicked   Msg = "web.tooManyPicked"
 	WebUnknownError    Msg = "web.unknownError"
+	WebClose           Msg = "web.close"
+	WebZoomIn          Msg = "web.zoomIn"
+	WebZoomOut         Msg = "web.zoomOut"
+	WebZoomFit         Msg = "web.zoomFit"
+	WebCreatedLabel    Msg = "web.createdLabel"
+	WebModified        Msg = "web.modified"
+	WebSize            Msg = "web.size"
+	WebVideoTodo       Msg = "web.videoTodo"
+	WebPreviewFailed   Msg = "web.previewFailed"
+	WebPreviewLoading  Msg = "web.previewLoading"
+	WebPreviewLibFail  Msg = "web.previewLibFail"
+	WebRowsOmitted     Msg = "web.rowsOmitted"
 )
 
 var catalogue = map[Lang]map[Msg]string{
@@ -267,6 +282,9 @@ var catalogue = map[Lang]map[Msg]string{
 		WebFolder:        "Folder",
 		WebDownload:      "Download",
 		WebDelete:        "Delete",
+		WebMore:          "More actions",
+		WebView:          "View",
+		WebOpenFolder:    "Open folder",
 		WebReadOnly:      "read-only",
 		WebNotConfigured: "Not configured",
 		WebShareCount:    "%d shared folder(s)",
@@ -307,6 +325,18 @@ var catalogue = map[Lang]map[Msg]string{
 		WebSelectNothing:   "Nothing selected",
 		WebTooManyPicked:   "At most %d items per download",
 		WebUnknownError:    "unknown error",
+		WebClose:           "Close",
+		WebZoomIn:          "Zoom in",
+		WebZoomOut:         "Zoom out",
+		WebZoomFit:         "Fit to window",
+		WebCreatedLabel:    "Created",
+		WebModified:        "Modified",
+		WebSize:            "Size",
+		WebVideoTodo:       "Video playback is not available yet",
+		WebPreviewFailed:   "This file cannot be previewed",
+		WebPreviewLoading:  "Loading preview…",
+		WebPreviewLibFail:  "Could not load the preview component",
+		WebRowsOmitted:     "Showing the first %d rows",
 	},
 	ZHCN: {
 		ErrServerRunning:     "服务已在运行",
@@ -402,6 +432,9 @@ var catalogue = map[Lang]map[Msg]string{
 		WebFolder:        "文件夹",
 		WebDownload:      "下载",
 		WebDelete:        "删除",
+		WebMore:          "更多操作",
+		WebView:          "查看",
+		WebOpenFolder:    "打开文件夹",
 		WebReadOnly:      "只读",
 		WebNotConfigured: "未配置",
 		WebShareCount:    "%d 个共享目录",
@@ -442,6 +475,18 @@ var catalogue = map[Lang]map[Msg]string{
 		WebSelectNothing:   "还没有选择任何项目",
 		WebTooManyPicked:   "一次最多打包 %d 项",
 		WebUnknownError:    "未知错误",
+		WebClose:           "关闭",
+		WebZoomIn:          "放大",
+		WebZoomOut:         "缩小",
+		WebZoomFit:         "适应窗口",
+		WebCreatedLabel:    "创建时间",
+		WebModified:        "修改时间",
+		WebSize:            "大小",
+		WebVideoTodo:       "视频播放功能尚未启用",
+		WebPreviewFailed:   "这个文件无法预览",
+		WebPreviewLoading:  "正在加载预览…",
+		WebPreviewLibFail:  "预览组件加载失败",
+		WebRowsOmitted:     "仅显示前 %d 行",
 	},
 }
 

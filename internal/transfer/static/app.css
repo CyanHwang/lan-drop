@@ -842,3 +842,196 @@ button.action svg { width: 18px; height: 18px; }
     transition-duration: .001ms !important;
   }
 }
+
+/* ---------- row menu ---------- */
+
+/* Every row used to carry two exposed buttons. They are now behind one
+   three-dot trigger; the menu itself is a single fixed element positioned by
+   the page, so a folder with a thousand rows does not render a thousand menus. */
+.row-menu {
+  position: fixed;
+  z-index: 55;
+  min-width: 170px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow-pop);
+  animation: fade-in .14s ease both;
+}
+.row-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.row-menu button:hover { background: var(--accent-soft); color: var(--accent); }
+.row-menu button.danger { color: var(--err); }
+.row-menu button.danger:hover { background: var(--err-soft); }
+.row-menu button svg { width: 17px; height: 17px; flex: 0 0 auto; }
+
+/* ---------- full-screen viewer ---------- */
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.viewer[hidden] { display: none; }
+.viewer-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.viewer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+.viewer-tools { display: flex; align-items: center; gap: 4px; }
+.viewer-tools button,
+.viewer-close {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+.viewer-tools button:active,
+.viewer-close:active { background: var(--surface-2); }
+.viewer-close svg { width: 16px; height: 16px; }
+.viewer-pct {
+  min-width: 50px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.viewer-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+.viewer-stage > img {
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: 0 0;
+  will-change: transform;
+  cursor: grab;
+}
+.viewer-stage > img.dragging { cursor: grabbing; }
+.viewer-meta {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding: 10px 16px calc(env(safe-area-inset-bottom) + 12px);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.viewer-meta b { font-weight: 500; color: var(--text-2); }
+.viewer-note {
+  max-width: 420px;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+#viewerFrame { width: 100%; height: 100%; border: 0; background: var(--surface); }
+
+/* Document previews. Scoped so none of this can leak into the listing. */
+.viewer-doc {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  overflow: auto;
+  padding: 26px 22px 70px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.viewer-doc > :first-child { margin-top: 0; }
+.viewer-doc h1, .viewer-doc h2, .viewer-doc h3, .viewer-doc h4 {
+  line-height: 1.3;
+  margin: 1.5em 0 .6em;
+  font-weight: 600;
+}
+.viewer-doc h1 { font-size: 1.7em; border-bottom: 1px solid var(--line); padding-bottom: .3em; }
+.viewer-doc h2 { font-size: 1.4em; border-bottom: 1px solid var(--line); padding-bottom: .25em; }
+.viewer-doc h3 { font-size: 1.2em; }
+.viewer-doc h4 { font-size: 1.05em; }
+.viewer-doc p, .viewer-doc ul, .viewer-doc ol, .viewer-doc blockquote,
+.viewer-doc pre, .viewer-doc table { margin: 0 0 1em; }
+.viewer-doc ul, .viewer-doc ol { padding-left: 1.6em; }
+.viewer-doc li + li { margin-top: .2em; }
+.viewer-doc a { color: var(--accent); }
+.viewer-doc img { max-width: 100%; height: auto; border-radius: 8px; }
+.viewer-doc code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .9em;
+  background: var(--surface-2);
+  padding: .15em .4em;
+  border-radius: 5px;
+}
+.viewer-doc pre {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+.viewer-doc pre code { background: none; padding: 0; }
+.viewer-doc blockquote {
+  padding: .2em 1em;
+  border-left: 3px solid var(--accent);
+  color: var(--text-2);
+}
+.viewer-doc hr { border: 0; border-top: 1px solid var(--line); margin: 1.6em 0; }
+.viewer-doc table { border-collapse: collapse; display: block; overflow-x: auto; max-width: 100%; }
+.viewer-doc th, .viewer-doc td {
+  border: 1px solid var(--line-2);
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+.viewer-doc th { background: var(--surface-2); font-weight: 500; }
+.viewer-doc .sheet-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 14px;
+}

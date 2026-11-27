@@ -210,6 +210,14 @@
   }
 
   $main.addEventListener("click", function (ev) {
+    // The three-dot trigger is the only exposed action on a row now.
+    var more = ev.target.closest("button[data-more]");
+    if (more) {
+      ev.stopPropagation();
+      openRowMenu(more);
+      return;
+    }
+
     // The checkbox column and the icon beside it are the selection hot spots.
     var pk = ev.target.closest("[data-pick]");
     if (pk) {
@@ -219,45 +227,134 @@
       return;
     }
 
-    // Download links are real anchors: the browser handles them, and this only
-    // adds the confirmation. No preventDefault, or the download stops working.
-    var dl = ev.target.closest("a.act-btn.dl");
-    if (dl) {
-      var row = dl.closest("li");
-      var label = row && row.querySelector(".name");
-      if (label) toast(t("downloadStarted", [label.textContent]));
-      return;
-    }
-
     var del = ev.target.closest("button[data-del]");
     if (del) {
       ev.stopPropagation();
-      var rel = del.getAttribute("data-del");
-      if (!window.confirm(t("confirmDelete", [rel.split("/").pop()]))) return;
-      fetch("/api/file?share=" + encodeURIComponent(shareId) + "&path=" + encodeURIComponent(rel), {
-        method: "DELETE"
+      deleteRow(del.getAttribute("data-del"), del.closest("li"));
+    }
+    // Folder names are real links; files have no click action. There is no
+    // JavaScript to run for navigation, which is the point of the SSR page.
+  });
+
+  function deleteRow(rel, li) {
+    if (!rel) return;
+    if (!window.confirm(t("confirmDelete", [rel.split("/").pop()]))) return;
+    fetch("/api/file?share=" + encodeURIComponent(shareId) + "&path=" + encodeURIComponent(rel), {
+      method: "DELETE"
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) throw new Error(d.error);
+        if (li) li.remove();
+        // Keep the selection model in step with the DOM, or "select all"
+        // keeps counting a row that no longer exists.
+        delete picked[rel];
+        entries = entries.filter(function (x) { return x !== rel; });
+        updateSelBar();
+        var list = document.getElementById("fileList");
+        var empty = document.getElementById("emptyState");
+        if (list && empty && !list.querySelector("li[data-rel]")) {
+          list.hidden = true;
+          empty.hidden = false;
+        }
+        toast(t("deleted"));
       })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d.error) throw new Error(d.error);
-          var li = del.closest("li");
-          if (li) li.remove();
-          // Keep the selection model in step with the DOM, or "select all"
-          // keeps counting a row that no longer exists.
-          delete picked[rel];
-          entries = entries.filter(function (x) { return x !== rel; });
-          updateSelBar();
-          var list = document.getElementById("fileList");
-          var empty = document.getElementById("emptyState");
-          if (list && empty && !list.querySelector("li[data-rel]")) {
-            list.hidden = true;
-            empty.hidden = false;
-          }
-          toast(t("deleted"));
-        })
-        .catch(function (e) { toast(t("deleteFailed", [e.message])); });
+      .catch(function (e) { toast(t("deleteFailed", [e.message])); });
+  }
+
+  /* ---------------- row menu ---------------- */
+
+  var $rowMenu = document.getElementById("rowMenu");
+  var $menuView = document.getElementById("menuView");
+  var $menuOpen = document.getElementById("menuOpen");
+  var $menuDownload = document.getElementById("menuDownload");
+  var $menuDelete = document.getElementById("menuDelete");
+  var menuRow = null;
+
+  function openRowMenu(btn) {
+    closeRowMenu();
+    menuRow = btn.closest("li");
+    if (!menuRow) return;
+    var isDir = menuRow.getAttribute("data-dir") === "1";
+    $menuView.hidden = menuRow.getAttribute("data-view") !== "1";
+    $menuOpen.hidden = !isDir;
+    $menuDownload.hidden = isDir;
+    if ($menuDelete) $menuDelete.hidden = readOnly;
+    $rowMenu.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+
+    // Anchor to the trigger and keep the whole menu on screen, including when
+    // the row is the last one and the usual position would fall off the bottom.
+    var r = btn.getBoundingClientRect();
+    var mw = $rowMenu.offsetWidth;
+    var mh = $rowMenu.offsetHeight;
+    var left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+    var top = r.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = r.top - mh - 4;
+    $rowMenu.style.left = Math.max(8, left) + "px";
+    $rowMenu.style.top = Math.max(8, top) + "px";
+  }
+
+  function closeRowMenu() {
+    if ($rowMenu.hidden) return;
+    $rowMenu.hidden = true;
+    var triggers = $main.querySelectorAll("button[data-more]");
+    for (var i = 0; i < triggers.length; i++) triggers[i].setAttribute("aria-expanded", "false");
+    menuRow = null;
+  }
+
+  document.addEventListener("pointerdown", function (ev) {
+    if (!$rowMenu.hidden && !$rowMenu.contains(ev.target) && !ev.target.closest("button[data-more]")) {
+      closeRowMenu();
     }
   });
+  window.addEventListener("scroll", closeRowMenu, true);
+  window.addEventListener("resize", closeRowMenu);
+
+  function currentRel() {
+    return menuRow ? menuRow.getAttribute("data-rel") : "";
+  }
+
+  function fileURL(rel, inline) {
+    return "/api/download?share=" + encodeURIComponent(shareId) +
+      "&path=" + encodeURIComponent(rel) + (inline ? "&inline=1" : "");
+  }
+
+  $menuView.addEventListener("click", function () {
+    var rel = currentRel();
+    closeRowMenu();
+    if (rel) openViewer(rel);
+  });
+
+  $menuOpen.addEventListener("click", function () {
+    var link = menuRow && menuRow.querySelector("a.meta");
+    var href = link ? link.getAttribute("href") : "";
+    closeRowMenu();
+    if (href) location.href = href;
+  });
+
+  $menuDownload.addEventListener("click", function () {
+    var rel = currentRel();
+    closeRowMenu();
+    if (!rel) return;
+    var a = document.createElement("a");
+    a.href = fileURL(rel, false);
+    a.download = rel.split("/").pop();
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast(t("downloadStarted", [rel.split("/").pop()]));
+  });
+
+  if ($menuDelete) {
+    $menuDelete.addEventListener("click", function () {
+      var rel = currentRel();
+      var row = menuRow;
+      closeRowMenu();
+      if (rel) deleteRow(rel, row);
+    });
+  }
 
   $selAll.addEventListener("click", toggleSelectAll);
 
@@ -282,6 +379,287 @@
         .catch(function (e) { toast(t("createFailed", [e.message])); });
     });
   }
+
+  /* ---------------- full-screen viewer ---------------- */
+
+  var $viewer = document.getElementById("viewer");
+  var $viewerStage = document.getElementById("viewerStage");
+  var $viewerImg = document.getElementById("viewerImg");
+  var $viewerDoc = document.getElementById("viewerDoc");
+  var $viewerFrame = document.getElementById("viewerFrame");
+  var $viewerName = document.getElementById("viewerName");
+  var $viewerMeta = document.getElementById("viewerMeta");
+  var $viewerTools = document.getElementById("viewerTools");
+  var $zoomPct = document.getElementById("zoomPct");
+
+  var viewerMode = "";
+  // A viewer opened, closed, and reopened quickly must not let the first
+  // preview paint over the second one after its fetch finishes.
+  var viewSeq = 0;
+  var zoom = { scale: 1, x: 0, y: 0 };
+  var drag = null;
+  var scriptCache = {};
+
+  function vendorURL(file) {
+    return "/static/vendor/" + file + "?v=" + encodeURIComponent(PAGE_BUILD);
+  }
+
+  function loadScript(url) {
+    if (scriptCache[url]) return scriptCache[url];
+    scriptCache[url] = new Promise(function (resolve, reject) {
+      var el = document.createElement("script");
+      el.src = url;
+      el.onload = resolve;
+      el.onerror = reject;
+      document.head.appendChild(el);
+    });
+    return scriptCache[url];
+  }
+
+  function resetViewer() {
+    viewerMode = "";
+    $viewerImg.hidden = true;
+    $viewerDoc.hidden = true;
+    $viewerFrame.hidden = true;
+    $viewerTools.hidden = true;
+    $viewerImg.removeAttribute("src");
+    $viewerFrame.removeAttribute("src");
+    drag = null;
+  }
+
+  function viewerNote(msg) {
+    resetViewer();
+    viewerMode = "note";
+    $viewerDoc.hidden = false;
+    $viewerDoc.innerHTML = '<div class="viewer-note">' + esc(msg) + "</div>";
+  }
+
+  function openViewer(rel) {
+    var row = null;
+    var lis = $main.querySelectorAll("li[data-rel]");
+    for (var i = 0; i < lis.length; i++) {
+      if (lis[i].getAttribute("data-rel") === rel) { row = lis[i]; break; }
+    }
+    var nameEl = row && row.querySelector(".name");
+    var name = nameEl ? nameEl.textContent : rel.split("/").pop();
+    $viewerName.textContent = name;
+
+    // Every value here is escaped: a file name is attacker-controlled text.
+    $viewerMeta.innerHTML =
+      "<span><b>" + esc(t("createdAt")) + "</b> " + esc((row && row.getAttribute("data-created")) || "—") + "</span>" +
+      "<span><b>" + esc(t("modified")) + "</b> " + esc((row && row.getAttribute("data-modified")) || "—") + "</span>" +
+      "<span><b>" + esc(t("size")) + "</b> " + esc((row && row.getAttribute("data-size")) || "—") + "</span>";
+
+    resetViewer();
+    $viewer.hidden = false;
+    var seq = ++viewSeq;
+    var ext = name.split(".").pop().toLowerCase();
+
+    if (isImageExt(ext)) return showViewerImage(rel, seq);
+    if (isVideoExtJS(ext)) return viewerNote(t("videoTodo"));
+    if (ext === "md" || ext === "markdown") return showMarkdown(rel, seq);
+    if (ext === "pdf") {
+      viewerMode = "frame";
+      $viewerFrame.hidden = false;
+      $viewerFrame.src = fileURL(rel, true);
+      return;
+    }
+    if (ext === "docx") return showDocx(rel, seq);
+    if (ext === "xlsx" || ext === "xls") return showSheet(rel, seq);
+    return viewerNote(t("previewFailed"));
+  }
+
+  function isImageExt(ext) {
+    return ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tif", "tiff", "svg", "heic", "heif", "avif"].indexOf(ext) >= 0;
+  }
+
+  function isVideoExtJS(ext) {
+    return ["mp4", "m4v", "mov", "mkv", "webm", "avi", "wmv", "flv", "mpg", "mpeg", "3gp"].indexOf(ext) >= 0;
+  }
+
+  function showViewerImage(rel, seq) {
+    viewerMode = "image";
+    $viewerImg.hidden = false;
+    $viewerTools.hidden = false;
+    $viewerImg.onload = function () { if (seq === viewSeq) fitImage(); };
+    $viewerImg.onerror = function () { if (seq === viewSeq) viewerNote(t("previewFailed")); };
+    // The full file is used here, not the 128 px thumbnail: pan and zoom need
+    // the detail, and this is one image the user deliberately opened.
+    $viewerImg.src = fileURL(rel, true);
+  }
+
+  function fitImage() {
+    var iw = $viewerImg.naturalWidth;
+    var ih = $viewerImg.naturalHeight;
+    if (!iw || !ih) return;
+    var sw = $viewerStage.clientWidth;
+    var sh = $viewerStage.clientHeight;
+    var s = Math.min(sw / iw, sh / ih, 1);
+    zoom.scale = s;
+    zoom.x = (sw - iw * s) / 2;
+    zoom.y = (sh - ih * s) / 2;
+    applyZoom();
+  }
+
+  function applyZoom() {
+    $viewerImg.style.transform =
+      "translate(" + zoom.x + "px," + zoom.y + "px) scale(" + zoom.scale + ")";
+    $zoomPct.textContent = Math.round(zoom.scale * 100) + "%";
+  }
+
+  // Zoom around a point instead of the origin, so the pixel under the cursor
+  // stays put. Otherwise a wheel scroll makes the image run away.
+  function setZoomAt(px, py, next) {
+    next = Math.max(0.05, Math.min(12, next));
+    var wx = (px - zoom.x) / zoom.scale;
+    var wy = (py - zoom.y) / zoom.scale;
+    zoom.x = px - wx * next;
+    zoom.y = py - wy * next;
+    zoom.scale = next;
+    applyZoom();
+  }
+
+  function zoomAtCenter(factor) {
+    setZoomAt($viewerStage.clientWidth / 2, $viewerStage.clientHeight / 2, zoom.scale * factor);
+  }
+
+  $viewerStage.addEventListener("wheel", function (e) {
+    if (viewerMode !== "image" || $viewerImg.hidden) return;
+    e.preventDefault();
+    var r = $viewerStage.getBoundingClientRect();
+    setZoomAt(e.clientX - r.left, e.clientY - r.top,
+      zoom.scale * Math.exp(-e.deltaY * 0.0015));
+  }, { passive: false });
+
+  $viewerStage.addEventListener("pointerdown", function (e) {
+    if (viewerMode !== "image" || $viewerImg.hidden) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: zoom.x, oy: zoom.y };
+    try { $viewerStage.setPointerCapture(e.pointerId); } catch (_) { /* older browser */ }
+    $viewerImg.classList.add("dragging");
+  });
+  $viewerStage.addEventListener("pointermove", function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    zoom.x = drag.ox + (e.clientX - drag.x);
+    zoom.y = drag.oy + (e.clientY - drag.y);
+    applyZoom();
+  });
+  function endDrag(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    drag = null;
+    $viewerImg.classList.remove("dragging");
+  }
+  $viewerStage.addEventListener("pointerup", endDrag);
+  $viewerStage.addEventListener("pointercancel", endDrag);
+  $viewerImg.addEventListener("dblclick", function () {
+    if (viewerMode !== "image") return;
+    if (Math.abs(zoom.scale - 1) < 0.01) fitImage();
+    else setZoomAt($viewerStage.clientWidth / 2, $viewerStage.clientHeight / 2, 1);
+  });
+
+  document.getElementById("zoomIn").addEventListener("click", function () { zoomAtCenter(1.25); });
+  document.getElementById("zoomOut").addEventListener("click", function () { zoomAtCenter(0.8); });
+  document.getElementById("zoomFit").addEventListener("click", fitImage);
+
+  async function showMarkdown(rel, seq) {
+    viewerMode = "doc";
+    $viewerDoc.hidden = false;
+    $viewerDoc.innerHTML = '<div class="viewer-note">' + esc(t("previewLoading")) + "</div>";
+    try {
+      await Promise.all([
+        loadScript(vendorURL("marked.min.js")),
+        loadScript(vendorURL("purify.min.js")),
+      ]);
+      if (seq !== viewSeq) return;
+      var res = await fetch(fileURL(rel, true));
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var text = await res.text();
+      if (seq !== viewSeq) return;
+      // Markdown may contain raw HTML. DOMPurify is not decoration here.
+      var html = window.marked.parse(text, { gfm: true });
+      $viewerDoc.innerHTML = window.DOMPurify.sanitize(html);
+    } catch (e) {
+      if (seq === viewSeq) viewerNote(t("previewLibFail"));
+    }
+  }
+
+  async function showDocx(rel, seq) {
+    viewerMode = "doc";
+    $viewerDoc.hidden = false;
+    $viewerDoc.innerHTML = '<div class="viewer-note">' + esc(t("previewLoading")) + "</div>";
+    try {
+      await Promise.all([
+        loadScript(vendorURL("mammoth.browser.min.js")),
+        loadScript(vendorURL("purify.min.js")),
+      ]);
+      if (seq !== viewSeq) return;
+      var res = await fetch(fileURL(rel, true));
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var buf = await res.arrayBuffer();
+      if (seq !== viewSeq) return;
+      var out = await window.mammoth.convertToHtml({ arrayBuffer: buf });
+      if (seq !== viewSeq) return;
+      $viewerDoc.innerHTML = window.DOMPurify.sanitize(out.value);
+    } catch (e) {
+      if (seq === viewSeq) viewerNote(t("previewLibFail"));
+    }
+  }
+
+  async function showSheet(rel, seq) {
+    viewerMode = "doc";
+    $viewerDoc.hidden = false;
+    $viewerDoc.innerHTML = '<div class="viewer-note">' + esc(t("previewLoading")) + "</div>";
+    try {
+      await loadScript(vendorURL("xlsx.mini.min.js"));
+      if (seq !== viewSeq) return;
+      var res = await fetch(fileURL(rel, true));
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var buf = await res.arrayBuffer();
+      if (seq !== viewSeq) return;
+      var wb = window.XLSX.read(new Uint8Array(buf), { type: "array" });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      if (!ws) throw new Error("empty workbook");
+      var rows = window.XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+      var limit = 500;
+      var html = rows.length > limit
+        ? '<p class="sheet-note">' + esc(t("rowsOmitted", [limit])) + "</p>"
+        : "";
+      html += "<table><tbody>";
+      for (var i = 0; i < Math.min(rows.length, limit); i++) {
+        html += "<tr>";
+        var row = rows[i] || [];
+        for (var j = 0; j < Math.min(row.length, 40); j++) {
+          html += "<td>" + esc(String(row[j] == null ? "" : row[j])) + "</td>";
+        }
+        html += "</tr>";
+      }
+      html += "</tbody></table>";
+      if (seq === viewSeq) $viewerDoc.innerHTML = html;
+    } catch (e) {
+      if (seq === viewSeq) viewerNote(t("previewFailed"));
+    }
+  }
+
+  function closeViewer() {
+    ++viewSeq;
+    $viewer.hidden = true;
+    resetViewer();
+    $viewerDoc.innerHTML = "";
+  }
+
+  document.getElementById("viewerClose").addEventListener("click", closeViewer);
+
+  document.addEventListener("keydown", function (e) {
+    if (!$viewer.hidden) {
+      if (e.key === "Escape") { e.preventDefault(); closeViewer(); return; }
+      if (viewerMode === "image") {
+        if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomAtCenter(1.25); }
+        else if (e.key === "-") { e.preventDefault(); zoomAtCenter(0.8); }
+        else if (e.key === "0") { e.preventDefault(); fitImage(); }
+      }
+      return;
+    }
+    if (e.key === "Escape") closeRowMenu();
+  });
 
   /* ---------------- upload queue ---------------- */
 

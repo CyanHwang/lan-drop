@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -93,10 +94,16 @@ type viewEntry struct {
 	// ThumbHref is empty unless previews are on and this file can be decoded.
 	// The version in the URL is the file's size and mtime: it exists for the
 	// browser's cache, not for the server's.
-	ThumbHref  string
-	IsDir      bool
-	Icon       string
-	Sub        string
+	ThumbHref    string
+	IsDir        bool
+	Icon         string
+	Sub          string
+	SizeText     string
+	CreatedText  string
+	ModifiedText string
+	// Viewable drives the "view" item in the row menu. Video is included even
+	// though playback is not wired up yet: the viewer explains that clearly.
+	Viewable   bool
 	Delay      string
 	AriaSelect string
 }
@@ -161,6 +168,13 @@ type pageData struct {
 	ClearPick    string
 	Download     string
 	Delete       string
+	More         string
+	View         string
+	OpenFolder   string
+	Close        string
+	ZoomIn       string
+	ZoomOut      string
+	ZoomFit      string
 	SharedFolder string
 	DropHere     string
 
@@ -205,6 +219,19 @@ var runtimeMsgs = map[string]i18n.Msg{
 	"failed":          i18n.WebFailed,
 	"waiting":         i18n.WebWaiting,
 	"unknownError":    i18n.WebUnknownError,
+	"view":            i18n.WebView,
+	"close":           i18n.WebClose,
+	"zoomIn":          i18n.WebZoomIn,
+	"zoomOut":         i18n.WebZoomOut,
+	"zoomFit":         i18n.WebZoomFit,
+	"createdAt":       i18n.WebCreatedLabel,
+	"modified":        i18n.WebModified,
+	"size":            i18n.WebSize,
+	"videoTodo":       i18n.WebVideoTodo,
+	"previewFailed":   i18n.WebPreviewFailed,
+	"previewLoading":  i18n.WebPreviewLoading,
+	"previewLibFail":  i18n.WebPreviewLibFail,
+	"rowsOmitted":     i18n.WebRowsOmitted,
 	"cancelAllAsk":    i18n.WebCancelAllAsk,
 	"uploadCancelled": i18n.WebUploadCancelled,
 }
@@ -320,6 +347,13 @@ func newPage(lang i18n.Lang, r *http.Request) *pageData {
 		ClearPick:    i18n.T(lang, i18n.WebClearPick),
 		Download:     i18n.T(lang, i18n.WebDownload),
 		Delete:       i18n.T(lang, i18n.WebDelete),
+		More:         i18n.T(lang, i18n.WebMore),
+		View:         i18n.T(lang, i18n.WebView),
+		OpenFolder:   i18n.T(lang, i18n.WebOpenFolder),
+		Close:        i18n.T(lang, i18n.WebClose),
+		ZoomIn:       i18n.T(lang, i18n.WebZoomIn),
+		ZoomOut:      i18n.T(lang, i18n.WebZoomOut),
+		ZoomFit:      i18n.T(lang, i18n.WebZoomFit),
 		SharedFolder: i18n.T(lang, i18n.WebSharedFolder),
 		DropHere:     i18n.T(lang, i18n.WebDropHere),
 		GoHome:       i18n.T(lang, i18n.WebGoHome),
@@ -571,12 +605,16 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 			rel = dir + "/" + e.Name
 		}
 		ve := viewEntry{
-			Name:       e.Name,
-			Rel:        rel,
-			IsDir:      e.IsDir,
-			Sub:        entrySub(lang, e),
-			Delay:      delayFor(i),
-			AriaSelect: i18n.T(lang, i18n.WebSelectItem, e.Name),
+			Name:         e.Name,
+			Rel:          rel,
+			IsDir:        e.IsDir,
+			Sub:          entrySub(lang, e),
+			SizeText:     humanBytes(e.Size),
+			CreatedText:  fmtStamp(unixMilliToTime(e.Created)),
+			ModifiedText: fmtStamp(time.UnixMilli(e.ModTime)),
+			Viewable:     !e.IsDir && s.viewable(e.Name),
+			Delay:        delayFor(i),
+			AriaSelect:   i18n.T(lang, i18n.WebSelectItem, e.Name),
 		}
 		if e.IsDir {
 			ve.Icon = "dir"
@@ -664,11 +702,13 @@ func (s *Server) listDir(lang i18n.Lang, shareID, dir string) ([]Entry, Share, i
 				continue
 			}
 		}
+		created := fileCreated(abs, info)
 		entries = append(entries, Entry{
 			Name:    de.Name(),
 			IsDir:   de.IsDir(),
 			Size:    info.Size(),
 			ModTime: info.ModTime().UnixMilli(),
+			Created: unixMilliOrZero(created),
 		})
 	}
 
@@ -680,6 +720,43 @@ func (s *Server) listDir(lang i18n.Lang, shareID, dir string) ([]Entry, Share, i
 	})
 
 	return entries, sh, http.StatusOK, nil
+}
+
+// fmtStamp is deliberately locale-neutral: a numeric timestamp reads the same
+// in both languages and never depends on the phone's idea of a date format.
+func fmtStamp(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("2006-01-02 15:04")
+}
+
+func unixMilliToTime(ms int64) time.Time {
+	if ms <= 0 {
+		return time.Time{}
+	}
+	return time.UnixMilli(ms)
+}
+
+// viewable names the formats the in-page viewer can do something with.
+func (s *Server) viewable(name string) bool {
+	if nativeImage(name) || isVideoName(name) {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".heic", ".heif", ".avif":
+		return s.ffmpegPath() != ""
+	case ".md", ".markdown", ".pdf", ".docx", ".xlsx", ".xls":
+		return true
+	}
+	return false
+}
+
+func unixMilliOrZero(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
+	}
+	return t.UnixMilli()
 }
 
 // shareList copies the share slice for rendering.

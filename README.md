@@ -180,6 +180,20 @@ Two ways to switch:
 The browser starts from the host's configured language. A manual choice in that browser wins, and it never writes to the host's config.
 On a `-tags server` build whose `lan-drop.ini` names no language, the browser falls back to `Accept-Language`, so a Chinese phone opens in Chinese.
 
+### Viewing files
+
+Each row keeps a single "⋯" trigger; view, open folder, download and delete live in its dropdown. A read-only server does not render the delete item.
+
+Files with a preview open in a full-screen viewer:
+
+- **Images** — drag to pan, wheel to zoom around the cursor, percentage in the toolbar; the footer shows the name, creation time, modification time and size. Double-click toggles between fit and 100%.
+- **Markdown** — rendered with a local `marked` and sanitised with `DOMPurify`, so HTML inside a document cannot run script in the page.
+- **docx** — converted with local `mammoth`; **xlsx / xls** — local `SheetJS` renders the first sheet, up to 500 rows.
+- **PDF** — the browser's built-in viewer.
+- **Video** — the entry exists, but playback is still undecided; the viewer says so for now.
+
+All preview libraries are vendored under `internal/transfer/static/vendor/`, loaded only when needed, and work offline. Licences are listed in that directory.
+
 ### Thumbnail previews
 
 Off by default. Turn them on in the desktop window's options area and the browser listing shows square previews for images and videos. The switch is persisted as `thumbnails` in `lan-drop.ini`, works whether the service is running or not, and clears the cache when turned off.
@@ -203,7 +217,7 @@ The browser page and every endpoint share one port. No extra services.
 | GET | `/static/` | Stylesheet and script, immutable-cached per build |
 | GET | `/api/thumb?share=&path=&v=` | Square preview; `v` is size and mtime, used only as a browser cache key |
 | GET | `/api/list?share=&dir=` | Directory listing. Empty `share` returns the virtual root |
-| GET | `/api/download?share=&path=` | Single-file download, supports `Range` |
+| GET | `/api/download?share=&path=&inline=1` | Single-file download, supports `Range`; `inline=1` serves it for the viewer instead of downloading |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | Batch zip. `paths` repeats; POST accepts a form body for large selections |
 | GET | `/api/probe?share=&dir=&name=&total=` | Staged bytes for a file; with `total` it also reports `complete` |
 | PUT | `/api/upload?share=&dir=&name=` | Chunked upload. `X-Offset` sets the resume point, `X-Total-Size` declares the file size, `X-Chunk-CRC32` carries the chunk checksum |

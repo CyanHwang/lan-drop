@@ -178,6 +178,20 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 用 `-tags server` 启动且 `lan-drop.ini` 里没有写死语言时，浏览器端改用 `Accept-Language`，
 中文手机会直接看到中文。
 
+### 查看文件
+
+每行只保留一个「⋯」按钮，查看、打开文件夹、下载、删除都在下拉菜单里；只读模式下不渲染删除项。
+
+支持的格式点「查看」会打开全屏预览：
+
+- **图片** —— 按住拖动、鼠标滚轮以光标为中心缩放，顶栏显示缩放百分比，底栏显示文件名、创建时间、修改时间和大小；双击在适应窗口与 100% 间切换
+- **Markdown** —— 本地 `marked` + `DOMPurify` 渲染并消毒，避免文档里的 HTML 在页面里执行脚本
+- **docx** —— 本地 `mammoth` 转 HTML；**xlsx / xls** —— 本地 `SheetJS` 取第一个工作表，最多显示前 500 行
+- **PDF** —— 用浏览器自带的 PDF 查看器
+- **视频** —— 入口已保留，播放器和播放功能尚未决定，目前打开后给出说明
+
+预览用的 JS 库都在 `internal/transfer/static/vendor/`，按需加载，局域网断网也能用，许可证见该目录的 README。
+
 ### 缩略图预览
 
 默认关闭。在桌面窗口的选项区打开后，浏览器列表里的图片和视频会直接显示方形预览；开关状态写在 `lan-drop.ini` 的 `thumbnails`，服务启动与否都能改，关闭时会立即清除缓存。
@@ -201,7 +215,7 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 | GET | `/static/` | 样式与脚本，按构建号长期缓存 |
 | GET | `/api/thumb?share=&path=&v=` | 方形缩略图；`v` 是文件大小与修改时间，仅用于浏览器缓存 |
 | GET | `/api/list?share=&dir=` | 目录列表；`share` 为空时返回虚拟根 |
-| GET | `/api/download?share=&path=` | 单文件下载，支持 `Range` |
+| GET | `/api/download?share=&path=&inline=1` | 单文件下载，支持 `Range`；`inline=1` 时改为内联显示，供查看器使用 |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | 批量打包；`paths` 可重复，POST 用表单体提交大量选择 |
 | GET | `/api/probe?share=&dir=&name=&total=` | 已收到的暂存字节数；带 `total` 时额外返回 `complete` |
 | PUT | `/api/upload?share=&dir=&name=` | 分片上传，`X-Offset` 指定续传起点，`X-Total-Size` 声明文件总大小，`X-Chunk-CRC32` 声明本片校验和 |

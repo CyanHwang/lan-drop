@@ -35,3 +35,8 @@
 {{define "icoZipDown"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>{{end}}
 
 {{define "icon"}}{{if eq . "dir"}}{{template "icoDir"}}{{else if eq . "image"}}{{template "icoImage"}}{{else if eq . "video"}}{{template "icoVideo"}}{{else if eq . "audio"}}{{template "icoAudio"}}{{else if eq . "zip"}}{{template "icoZip"}}{{else if eq . "doc"}}{{template "icoDoc"}}{{else}}{{template "icoFile"}}{{end}}{{end}}
+
+{{define "icoMore"}}<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>{{end}}
+
+
+{{define "icoEye"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.7"/></svg>{{end}}
