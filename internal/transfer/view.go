@@ -131,6 +131,9 @@ type pageData struct {
 	ReadOnly bool
 	CanWrite bool
 	ShowDock bool
+	// HasFfmpeg tells the page whether a video the browser cannot decode has
+	// a fallback, or whether the only option left is downloading it.
+	HasFfmpeg bool
 
 	PathLabel string
 	HomeHref  string
@@ -229,11 +232,17 @@ var runtimeMsgs = map[string]i18n.Msg{
 	"createdAt":       i18n.WebCreatedLabel,
 	"modified":        i18n.WebModified,
 	"size":            i18n.WebSize,
-	"videoTodo":       i18n.WebVideoTodo,
+	"videoFallback":   i18n.WebVideoFallback,
+	"videoConverting": i18n.WebVideoConverting,
 	"previewFailed":   i18n.WebPreviewFailed,
 	"previewLoading":  i18n.WebPreviewLoading,
 	"previewLibFail":  i18n.WebPreviewLibFail,
 	"rowsOmitted":     i18n.WebRowsOmitted,
+	"download":        i18n.WebDownload,
+	"resolution":      i18n.WebResolution,
+	"frameRate":       i18n.WebFrameRate,
+	"duration":        i18n.WebDuration,
+	"codec":           i18n.WebCodec,
 	"cancelAllAsk":    i18n.WebCancelAllAsk,
 	"uploadCancelled": i18n.WebUploadCancelled,
 }
@@ -545,6 +554,7 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 	p.ReadOnly = s.readOnly.Load()
 	p.CanWrite = !p.ReadOnly
 	p.ShowDock = p.CanWrite
+	p.HasFfmpeg = s.TranscodeAvailable()
 	p.RootChip = chipText(lang, len(shares), p.ReadOnly)
 
 	if dir == "" {
@@ -747,17 +757,16 @@ func unixMilliToTime(ms int64) time.Time {
 }
 
 // viewerImageName covers formats that should come back through the server's
-// renderer rather than being handed to the browser as a raw file. SVG is
-// excluded: it is safe in an <img> but cannot be decoded by image.Decode.
+// renderer rather than being handed to the browser as a raw file.
+//
+// Native formats are deliberately not on this list. Re-encoding a JPEG to a
+// 1600 px rendition threw away two things the original has: EXIF orientation
+// (a phone's portrait photo arrived sideways) and animation. The browser also
+// renders those formats better than a downscale does, and it costs the host no
+// CPU at all.
 func viewerImageName(name string) bool {
-	if strings.EqualFold(filepath.Ext(name), ".svg") {
-		return false
-	}
-	if nativeImage(name) {
-		return true
-	}
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".heic", ".heif", ".avif":
+	case ".heic", ".heif", ".avif", ".tif", ".tiff":
 		return true
 	}
 	return false

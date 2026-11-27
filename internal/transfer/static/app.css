@@ -937,8 +937,11 @@ button.action svg { width: 18px; height: 18px; }
   overflow: hidden;
   display: grid;
   place-items: center;
-  touch-action: none;
+  /* A video's own controls need touch gestures; only the pannable image mode
+     takes them away. */
+  touch-action: manipulation;
 }
+.viewer-stage.panning { touch-action: none; }
 .viewer-stage > img {
   max-width: none;
   max-height: none;
@@ -1096,7 +1099,7 @@ button.action svg { width: 18px; height: 18px; }
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  padding: 18px 20px 60px;
+  padding: 0;
 }
 /* A Word-like page: generous margins, normal paragraph rhythm. */
 .viewer-doc.word {
@@ -1134,10 +1137,144 @@ button.action svg { width: 18px; height: 18px; }
 }
 .viewer-doc.word section.docx-preview > article { padding: 0 !important; }
 
-.viewer-doc.spreadsheet table { display: table; width: 100%; }
-.viewer-doc.spreadsheet tr:first-child td {
-  background: var(--surface-2);
-  font-weight: 500;
+/* A spreadsheet is a grid, not a page: tabs on top, the sheet below scrolling
+   under a frozen header and a frozen row gutter. */
+.viewer-doc.spreadsheet {
+  width: 100%;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sheet-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  overflow-x: auto;
+}
+.sheet-tab {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sheet-tab:hover { background: var(--surface-2); color: var(--text-2); }
+.sheet-tab.on { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+
+.sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.viewer-doc.spreadsheet table {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.viewer-doc.spreadsheet th,
+.viewer-doc.spreadsheet td {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+  /* Excel keeps a long value inside its cell; wrapping is closer to that than
+     a horizontal scrollbar per row. Newlines inside a cell are real too. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.viewer-doc.spreadsheet thead th {
   position: sticky;
   top: 0;
+  z-index: 2;
+  padding: 5px 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: center;
+  user-select: none;
 }
+/* Row numbers stay put while the columns scroll: without that, the further
+   right you scroll the less a row means. */
+.viewer-doc.spreadsheet .sheet-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 44px;
+  padding: 7px 8px 7px 4px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 400;
+  text-align: right;
+  user-select: none;
+}
+.viewer-doc.spreadsheet thead .sheet-gutter { z-index: 3; }
+.viewer-doc.spreadsheet tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+.viewer-doc.spreadsheet tbody tr:hover { background: var(--accent-soft); }
+.viewer-doc.spreadsheet .sheet-note {
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.viewer-download {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+  transition: color .16s, border-color .16s, background-color .16s;
+}
+.viewer-download:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.viewer-download svg { width: 16px; height: 16px; display: block; }
+
+/* ---------- video ---------- */
+
+/* Native playback: the original file over HTTP Range, letterboxed inside the
+   stage. The black plate is what a video looks like before its first frame, so
+   it reads as intentional rather than as a hole in the page. */
+.viewer-stage > video {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  border-radius: 12px;
+  background: #000;
+  box-shadow: var(--shadow-pop);
+  outline: none;
+}
+.viewer-converting { color: var(--accent); }

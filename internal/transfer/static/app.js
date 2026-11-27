@@ -388,14 +388,19 @@
   var $viewer = document.getElementById("viewer");
   var $viewerStage = document.getElementById("viewerStage");
   var $viewerImg = document.getElementById("viewerImg");
+  var $viewerVideo = document.getElementById("viewerVideo");
   var $viewerDoc = document.getElementById("viewerDoc");
   var $viewerFrame = document.getElementById("viewerFrame");
   var $viewerName = document.getElementById("viewerName");
   var $viewerMeta = document.getElementById("viewerMeta");
   var $viewerTools = document.getElementById("viewerTools");
   var $zoomPct = document.getElementById("zoomPct");
+  // ffmpeg on the host is what makes a format the browser cannot decode
+  // recoverable. The flag comes from the server with the page.
+  var HAS_FFMPEG = body.getAttribute("data-ffmpeg") === "1";
 
   var viewerMode = "";
+  var viewerRel = "";
   // A viewer opened, closed, and reopened quickly must not let the first
   // preview paint over the second one after its fetch finishes.
   var viewSeq = 0;
@@ -422,11 +427,23 @@
   function resetViewer() {
     viewerMode = "";
     $viewerImg.hidden = true;
+    $viewerVideo.hidden = true;
     $viewerDoc.hidden = true;
     $viewerFrame.hidden = true;
     $viewerTools.hidden = true;
     $viewerDoc.className = "viewer-doc";
+    $viewerStage.classList.remove("panning");
     $viewerImg.removeAttribute("src");
+    // Not just visual: without this, closing the viewer leaves the audio
+    // playing behind the listing. The handlers are cleared first — load() on
+    // an empty source fires an error, and a leftover handler would treat that
+    // as "this file cannot play" and reopen the fallback for a file nobody is
+    // looking at any more.
+    $viewerVideo.onerror = null;
+    $viewerVideo.onloadedmetadata = null;
+    try { $viewerVideo.pause(); } catch (_) { /* never started */ }
+    $viewerVideo.removeAttribute("src");
+    try { $viewerVideo.load(); } catch (_) { /* ignore */ }
     $viewerFrame.removeAttribute("src");
     drag = null;
   }
@@ -447,23 +464,36 @@
     var nameEl = row && row.querySelector(".name");
     var name = nameEl ? nameEl.textContent : rel.split("/").pop();
     $viewerName.textContent = name;
+    viewerRel = rel;
 
     // Every value here is escaped: a file name is attacker-controlled text.
-    $viewerMeta.innerHTML =
-      "<span><b>" + esc(t("createdAt")) + "</b> " + esc((row && row.getAttribute("data-created")) || "—") + "</span>" +
-      "<span><b>" + esc(t("modified")) + "</b> " + esc((row && row.getAttribute("data-modified")) || "—") + "</span>" +
-      "<span><b>" + esc(t("size")) + "</b> " + esc((row && row.getAttribute("data-size")) || "—") + "</span>";
+    // The creation time is skipped rather than dashed out when the filesystem
+    // has no birth time (Linux filesystems without statx btime, most net
+    // shares) — "—" next to a real date reads like a bug.
+    var bits = [];
+    var created = (row && row.getAttribute("data-created")) || "";
+    if (created) {
+      bits.push("<span><b>" + esc(t("createdAt")) + "</b> " + esc(created) + "</span>");
+    }
+    bits.push("<span><b>" + esc(t("modified")) + "</b> " +
+      esc((row && row.getAttribute("data-modified")) || "—") + "</span>");
+    bits.push("<span><b>" + esc(t("size")) + "</b> " +
+      esc((row && row.getAttribute("data-size")) || "—") + "</span>");
+    $viewerMeta.innerHTML = bits.join("");
 
+    // Bumped before anything is torn down: resetViewer fires events, and a
+    // handler left over from the previous file must already look stale.
+    var seq = ++viewSeq;
     resetViewer();
     $viewer.hidden = false;
-    var seq = ++viewSeq;
+    loadViewerMeta(rel, seq);
     var ext = name.split(".").pop().toLowerCase();
 
     if (isImageExt(ext)) {
       var rendered = row ? row.getAttribute("data-viewer") : "";
       return showViewerImage(rel, seq, rendered);
     }
-    if (isVideoExtJS(ext)) return viewerNote(t("videoTodo"));
+    if (isVideoExtJS(ext)) return showVideo(rel, seq);
     if (ext === "md" || ext === "markdown") return showMarkdown(rel, seq);
     if (ext === "pdf") {
       viewerMode = "frame";
@@ -484,16 +514,93 @@
     return ["mp4", "m4v", "mov", "mkv", "webm", "avi", "wmv", "flv", "mpg", "mpeg", "3gp"].indexOf(ext) >= 0;
   }
 
+  function formatDuration(seconds) {
+    var s = Math.round(seconds);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    if (h > 0) return h + ":" + ("0" + m).slice(-2) + ":" + ("0" + sec).slice(-2);
+    return m + ":" + ("0" + sec).slice(-2);
+  }
+
+  // 30 must not read as "30.00", and 29.97 must keep its decimals.
+  function trimNum(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return "";
+    return String(Math.round(n * 100) / 100);
+  }
+
+  // Metadata is probed only for the file being viewed. A listing of a hundred
+  // videos must not launch a hundred ffprobe processes.
+  async function loadViewerMeta(rel, seq) {
+    try {
+      var res = await fetch("/api/preview/info?share=" + encodeURIComponent(shareId) +
+        "&path=" + encodeURIComponent(rel));
+      if (!res.ok) return;
+      var m = await res.json();
+      if (seq !== viewSeq) return;
+      var extra = "";
+      if (m.width && m.height) {
+        extra += "<span><b>" + esc(t("resolution")) + "</b> " + m.width + " × " + m.height + "</span>";
+      }
+      if (m.dpi) extra += "<span><b>DPI</b> " + m.dpi + "</span>";
+      if (m.frameRate) {
+        extra += "<span><b>" + esc(t("frameRate")) + "</b> " + esc(trimNum(m.frameRate)) + " fps</span>";
+      }
+      if (m.duration) {
+        extra += "<span><b>" + esc(t("duration")) + "</b> " + formatDuration(m.duration) + "</span>";
+      }
+      if (m.codec) extra += "<span><b>" + esc(t("codec")) + "</b> " + esc(m.codec) + "</span>";
+      if (extra) $viewerMeta.insertAdjacentHTML("beforeend", extra);
+    } catch (e) { /* metadata is optional */ }
+  }
+
   function showViewerImage(rel, seq, rendered) {
     viewerMode = "image";
     $viewerImg.hidden = false;
     $viewerTools.hidden = false;
+    $viewerStage.classList.add("panning");
     $viewerImg.onload = function () { if (seq === viewSeq) fitImage(); };
     $viewerImg.onerror = function () { if (seq === viewSeq) viewerNote(t("previewFailed")); };
     // A server-rendered 1600 px JPEG when the browser cannot display the
-    // original format (HEIC, AVIF) or when the original is needlessly huge;
-    // otherwise the raw file through the inline download endpoint.
+    // original format (HEIC, AVIF, TIFF); otherwise the raw file through the
+    // inline download endpoint, which keeps EXIF orientation and animation.
     $viewerImg.src = rendered || fileURL(rel, true);
+  }
+
+  // Video plays from the original file first. The endpoint supports Range, so
+  // scrubbing is instant and the host spends no CPU at all. Everything else is
+  // a fallback for codecs the browser has no decoder for.
+  function showVideo(rel, seq) {
+    viewerMode = "video";
+    $viewerVideo.hidden = false;
+    $viewerVideo.onerror = function () {
+      if (seq === viewSeq) fallbackVideo(rel, seq);
+    };
+    playVideo(fileURL(rel, true));
+  }
+
+  function playVideo(src) {
+    $viewerVideo.src = src;
+    var started = $viewerVideo.play();
+    // Autoplay with sound is refused until the page has had a real gesture;
+    // the click that opened the viewer usually counts, but Safari disagrees.
+    // The controls are visible either way, so a rejected promise is not an
+    // error worth reporting.
+    if (started && started.catch) started.catch(function () {});
+  }
+
+  function fallbackVideo(rel, seq) {
+    if (!HAS_FFMPEG) return viewerNote(t("videoFallback"));
+    viewerMode = "video";
+    $viewerVideo.hidden = false;
+    $viewerMeta.insertAdjacentHTML("beforeend",
+      '<span class="viewer-converting">' + esc(t("videoConverting")) + "</span>");
+    $viewerVideo.onerror = function () {
+      if (seq === viewSeq) viewerNote(t("videoFallback"));
+    };
+    playVideo("/api/media/transcode?share=" + encodeURIComponent(shareId) +
+      "&path=" + encodeURIComponent(rel));
   }
 
   function fitImage() {
@@ -622,6 +729,14 @@
     }
   }
 
+  var currentWorkbook = null;
+
+  // A spreadsheet is not a document. Rendering ten thousand cells would freeze
+  // a phone, so the window is bounded and the footer says so.
+  var SHEET_MAX_ROWS = 400;
+  var SHEET_MAX_COLS = 60;
+  var SHEET_MAX_CELLS = 12000;
+
   async function showSheet(rel, seq) {
     viewerMode = "doc";
     $viewerDoc.className = "viewer-doc spreadsheet";
@@ -634,27 +749,157 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       var buf = await res.arrayBuffer();
       if (seq !== viewSeq) return;
-      var wb = window.XLSX.read(new Uint8Array(buf), { type: "array" });
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      if (!ws) throw new Error("empty workbook");
-      var rows = window.XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
-      var limit = 500;
-      var html = rows.length > limit
-        ? '<p class="sheet-note">' + esc(t("rowsOmitted", [limit])) + "</p>"
-        : "";
-      html += "<table><tbody>";
-      for (var i = 0; i < Math.min(rows.length, limit); i++) {
-        html += "<tr>";
-        var row = rows[i] || [];
-        for (var j = 0; j < Math.min(row.length, 40); j++) {
-          html += "<td>" + esc(String(row[j] == null ? "" : row[j])) + "</td>";
-        }
-        html += "</tr>";
-      }
-      html += "</tbody></table>";
-      if (seq === viewSeq) $viewerDoc.innerHTML = html;
+      // cellStyles brings cell fills across; fonts and borders are not in the
+      // mini build, so the table chrome below supplies the rest.
+      currentWorkbook = window.XLSX.read(new Uint8Array(buf), {
+        type: "array",
+        cellStyles: true,
+      });
+      if (!currentWorkbook.SheetNames.length) throw new Error("empty workbook");
+      if (seq === viewSeq) renderSheetTab(0);
     } catch (e) {
       if (seq === viewSeq) viewerNote(t("previewFailed"));
+    }
+  }
+
+  // Fills arrive as ARGB ("FF1F4E79") or RGB ("1F4E79"), and sometimes as a
+  // theme or palette index that has no literal colour in the file. Only the
+  // literal forms are used; anything else falls back to the table's own look.
+  function fillColor(cell) {
+    var s = cell && cell.s;
+    if (!s || s.patternType === "none") return "";
+    var rgb = s.fgColor && s.fgColor.rgb;
+    if (!rgb || typeof rgb !== "string") return "";
+    rgb = rgb.replace(/^#/, "");
+    if (rgb.length === 8) rgb = rgb.slice(2);
+    if (rgb.length !== 6 || /[^0-9a-fA-F]/.test(rgb)) return "";
+    return "#" + rgb;
+  }
+
+  function cellText(cell) {
+    if (!cell) return "";
+    // w is the formatted value: currency, percentages and dates all arrive the
+    // way the spreadsheet shows them, without a second formatting pass here.
+    if (cell.w != null && cell.w !== "") return String(cell.w);
+    if (cell.v == null) return "";
+    return String(cell.v);
+  }
+
+  function renderSheetTab(index) {
+    var wb = currentWorkbook;
+    if (!wb) return;
+    var XLSX = window.XLSX;
+    var name = wb.SheetNames[index];
+    var ws = wb.Sheets[name] || {};
+
+    var range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+    var firstRow = range ? range.s.r : 0;
+    var firstCol = range ? range.s.c : 0;
+    var lastRow = range ? range.e.r : -1;
+    var lastCol = range ? range.e.c : -1;
+    var rowsShown = Math.min(lastRow - firstRow + 1, SHEET_MAX_ROWS);
+    var colsShown = Math.min(lastCol - firstCol + 1, SHEET_MAX_COLS);
+    if (rowsShown < 1 || colsShown < 1) rowsShown = colsShown = 0;
+
+    // Merged ranges and covered cells. A merge that starts outside the window
+    // is clamped to it, otherwise colspan would point at columns that are not
+    // rendered.
+    var merges = ws["!merges"] || [];
+    var spanAt = {};
+    var covered = {};
+    for (var mi = 0; mi < merges.length; mi++) {
+      var m = merges[mi];
+      var rs = Math.min(m.e.r, firstRow + rowsShown - 1) - m.s.r + 1;
+      var cs = Math.min(m.e.c, firstCol + colsShown - 1) - m.s.c + 1;
+      if (rs < 1 || cs < 1) continue;
+      spanAt[m.s.r + ":" + m.s.c] = { rs: rs, cs: cs };
+      for (var mr = m.s.r; mr < m.s.r + rs; mr++) {
+        for (var mc = m.s.c; mc < m.s.c + cs; mc++) {
+          if (mr !== m.s.r || mc !== m.s.c) covered[mr + ":" + mc] = true;
+        }
+      }
+    }
+
+    var tabs = "";
+    for (var i = 0; i < wb.SheetNames.length; i++) {
+      tabs += '<button type="button" class="sheet-tab' + (i === index ? " on" : "") +
+        '" data-sheet="' + i + '">' + esc(wb.SheetNames[i]) + "</button>";
+    }
+
+    // Excel widths are pixels, but the table still has to fill the window when
+    // the sheet is narrow. Columns keep their proportions; the table's
+    // min-width is what turns a wide sheet back into a horizontal scroll.
+    var cols = ws["!cols"] || [];
+    var widths = [];
+    var declaredPx = 0;
+    for (var wc = 0; wc < colsShown; wc++) {
+      var col = cols[firstCol + wc];
+      var px = col ? (col.wpx || (col.wch ? Math.round(col.wch * 7 + 5) : 0)) : 0;
+      if (!px) px = 96;
+      widths.push(px);
+      declaredPx += px;
+    }
+    var minTablePx = Math.min(Math.max(declaredPx, colsShown * 80), 3200);
+
+    var html = '<div class="sheet-tabs">' + tabs + "</div>";
+    html += '<div class="sheet-scroll">';
+
+    var rowNote = rowsShown < lastRow - firstRow + 1;
+    if (rowNote) {
+      html += '<p class="sheet-note">' + esc(t("rowsOmitted", [rowsShown])) + "</p>";
+    }
+
+    html += '<table style="min-width:' + minTablePx + 'px">';
+    html += "<colgroup><col style=\"width:44px\">";
+    for (var cg = 0; cg < colsShown; cg++) {
+      html += '<col style="width:' + (widths[cg] / declaredPx * 100).toFixed(2) + '%">';
+    }
+    html += "</colgroup><thead><tr><th class=\"sheet-gutter\"></th>";
+    for (var hc = 0; hc < colsShown; hc++) {
+      html += "<th>" + esc(XLSX.utils.encode_col(firstCol + hc)) + "</th>";
+    }
+    html += "</tr></thead><tbody>";
+
+    var painted = 0;
+    for (var r = 0; r < rowsShown && painted < SHEET_MAX_CELLS; r++) {
+      var rn = firstRow + r;
+      var rowInfo = (ws["!rows"] || [])[rn];
+      var rowStyle = rowInfo && rowInfo.hpx ? ' style="height:' + rowInfo.hpx + 'px"' : "";
+      html += "<tr" + rowStyle + '><th class="sheet-gutter">' + (rn + 1) + "</th>";
+      for (var c = 0; c < colsShown && painted < SHEET_MAX_CELLS; c++) {
+        var cn = firstCol + c;
+        if (covered[rn + ":" + cn]) continue;
+        var cell = ws[XLSX.utils.encode_cell({ r: rn, c: cn })];
+        var span = spanAt[rn + ":" + cn];
+        var attrs = "";
+        if (span) {
+          if (span.cs > 1) attrs += ' colspan="' + span.cs + '"';
+          if (span.rs > 1) attrs += ' rowspan="' + span.rs + '"';
+        }
+        var style = "";
+        var fill = fillColor(cell);
+        if (fill) style += "background:" + fill + ";";
+        var align = cell && cell.s && cell.s.alignment && cell.s.alignment.horizontal;
+        if (align === "center" || align === "right" || align === "left") {
+          style += "text-align:" + align + ";";
+        } else if (cell && cell.t === "n") {
+          // Excel's own default: numbers right, text left.
+          style += "text-align:right;";
+        }
+        if (style) attrs += ' style="' + style + '"';
+        html += "<td" + attrs + ">" + esc(cellText(cell)) + "</td>";
+        painted++;
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table></div>";
+    $viewerDoc.innerHTML = html;
+
+    var buttons = $viewerDoc.querySelectorAll("button[data-sheet]");
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].addEventListener("click", function (e) {
+        renderSheetTab(Number(e.currentTarget.getAttribute("data-sheet")));
+      });
     }
   }
 
@@ -666,6 +911,20 @@
   }
 
   document.getElementById("viewerClose").addEventListener("click", closeViewer);
+
+  // Downloading from inside the viewer keeps the same file in view; unlike a
+  // "save preview" it hands back the original bytes and name.
+  document.getElementById("viewerDownload").addEventListener("click", function () {
+    if (!viewerRel) return;
+    var a = document.createElement("a");
+    a.href = fileURL(viewerRel, false);
+    a.download = viewerRel.split("/").pop();
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast(t("downloadStarted", [viewerRel.split("/").pop()]));
+  });
 
   document.addEventListener("keydown", function (e) {
     if (!$viewer.hidden) {

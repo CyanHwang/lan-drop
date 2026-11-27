@@ -39,7 +39,7 @@ func TestPageUsesRowMenu(t *testing.T) {
 	if n := strings.Count(body, "data-more="); n != 3 {
 		t.Fatalf("%d three-dot triggers for 3 rows", n)
 	}
-	for _, id := range []string{"rowMenu", "viewer", "viewerStage", "viewerImg", "viewerDoc", "viewerFrame"} {
+	for _, id := range []string{"rowMenu", "viewer", "viewerStage", "viewerImg", "viewerVideo", "viewerDoc", "viewerFrame"} {
 		if !strings.Contains(body, `id="`+id+`"`) {
 			t.Fatalf("page is missing #%s", id)
 		}
@@ -78,6 +78,71 @@ func TestPageMarksViewableFiles(t *testing.T) {
 	}
 	if tag := rowTag(body, "photo.jpg"); !strings.Contains(tag, "data-created=") || !strings.Contains(tag, "data-modified=") {
 		t.Fatalf("viewer metadata missing from row: %s", tag)
+	}
+}
+
+// Formats the browser renders natively must be served as the original file.
+// Re-encoding a JPEG to a fixed 1600 px preview dropped its EXIF orientation —
+// a phone's portrait photo opened sideways — and flattened animated GIFs.
+func TestNativeImagesUseTheOriginalFile(t *testing.T) {
+	_, base, root, _ := newTestServer(t)
+	for _, n := range []string{"photo.jpg", "anim.gif", "scan.tiff"} {
+		if err := os.WriteFile(filepath.Join(root, n), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	_, body := getPage(t, base+"/s/test/", nil)
+	if tag := rowTag(body, "photo.jpg"); !strings.Contains(tag, `data-viewer=""`) {
+		t.Fatalf("JPEG should not be re-encoded for the viewer: %s", tag)
+	}
+	if tag := rowTag(body, "anim.gif"); !strings.Contains(tag, `data-viewer=""`) {
+		t.Fatalf("GIF should not be re-encoded for the viewer: %s", tag)
+	}
+	// No browser decodes TIFF, so that one does go through the renderer.
+	if tag := rowTag(body, "scan.tiff"); !strings.Contains(tag, "size=large") {
+		t.Fatalf("TIFF should get a rendered preview: %s", tag)
+	}
+}
+
+// Video is viewable, and the page carries whether the host can transcode a
+// format the browser refuses — that flag is the difference between "download
+// it" and a silent broken player.
+func TestPageMarksVideoPlayable(t *testing.T) {
+	_, base, root, _ := newTestServer(t)
+	if err := os.WriteFile(filepath.Join(root, "clip.mp4"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, body := getPage(t, base+"/s/test/", nil)
+	if tag := rowTag(body, "clip.mp4"); !strings.Contains(tag, `data-view="1"`) {
+		t.Fatalf("video is not offered to the viewer: %s", tag)
+	}
+	if !strings.Contains(body, `data-ffmpeg="`) {
+		t.Fatal("page does not report whether the host can transcode")
+	}
+	if !strings.Contains(body, `<video id="viewerVideo"`) {
+		t.Fatal("viewer has no video element")
+	}
+}
+
+// Preview requests ask for the bytes inline, not as an attachment, with a
+// MIME type the browser can actually use. A <video> fed octet-stream with
+// nosniff refuses to play a file it could decode perfectly.
+func TestInlineVideoContentType(t *testing.T) {
+	_, base, root, _ := newTestServer(t)
+	if err := os.WriteFile(filepath.Join(root, "clip.mp4"), []byte("not really"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resp := do(t, "GET", base+"/api/download?share=test&path=clip.mp4&inline=1", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "video/mp4" {
+		t.Fatalf("Content-Type = %q, want video/mp4", ct)
+	}
+	if cd := resp.Header.Get("Content-Disposition"); !strings.HasPrefix(cd, "inline;") {
+		t.Fatalf("Content-Disposition = %q", cd)
 	}
 }
 

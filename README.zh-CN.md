@@ -184,11 +184,11 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 
 支持的格式点「查看」会打开全屏预览：
 
-- **图片** —— 按住拖动、鼠标滚轮以光标为中心缩放，顶栏显示缩放百分比，底栏显示文件名、创建时间、修改时间和大小；双击在适应窗口与 100% 间切换。HEIC / AVIF 等浏览器不认的格式由 ffmpeg 转成 JPEG 后显示，这条路径是用户主动点击触发的，即使缩略图开关关闭也能用
+- **图片** —— 按住拖动、鼠标滚轮以光标为中心缩放，顶栏显示缩放百分比和下载按钮，底栏显示文件名、创建时间、修改时间、大小和分辨率（有 DPI 时也显示）。浏览器原生支持的格式直接给原文件，EXIF 方向和动图都不会丢；只有 HEIC/HEIF、AVIF、TIFF 由 ffmpeg 转换后展示，只有列表里的 128px 图标才裁成正方形。双击在适应窗口与 100% 间切换
 - **Markdown** —— 本地 `marked` + `DOMPurify` 渲染并消毒，避免文档里的 HTML 在页面里执行脚本
-- **docx** —— 本地 `docx-preview` 保留 Word 的段落与表格排版；**xlsx / xls** —— 本地 `SheetJS` 取第一个工作表，铺满窗口宽度，最多显示前 500 行
+- **docx** —— 本地 `docx-preview` 保留 Word 的段落与表格排版；**xlsx / xls** —— 本地 `SheetJS` 按表格还原：列宽、合并单元格、行高、单元格底色和数字格式都取自文件，另有冻结的表头行、行号和斑马纹，铺满窗口宽度，每个工作表最多显示前 400 行
 - **PDF** —— 用浏览器自带的 PDF 查看器
-- **视频** —— 入口已保留，播放器和播放功能尚未决定，目前打开后给出说明
+- **视频** —— 直接用原生控件播放原文件，走 HTTP `Range`，拖动进度条即时响应，主机不耗 CPU。浏览器没有对应容器/编码的解码器时（HEVC 的 `.mov`、`.avi`、`.wmv`），页面会让主机用 ffmpeg 实时转成 H.264/AAC 流式播放，这条兜底路径只能在已发送的范围内拖动。没有 ffmpeg 时查看器会说明原因并给出下载按钮。底栏显示分辨率、帧率、时长和编码（来自 ffprobe）
 
 预览用的 JS 库都在 `internal/transfer/static/vendor/`，按需加载，局域网断网也能用，许可证见该目录的 README。
 
@@ -197,7 +197,7 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 默认关闭。在桌面窗口的选项区打开后，浏览器列表里的图片和视频会直接显示方形预览；开关状态写在 `lan-drop.ini` 的 `thumbnails`，服务启动与否都能改，关闭时会立即清除缓存。
 
 - JPEG / PNG / GIF / WebP / BMP / TIFF 由程序自己解码，无外部依赖
-- PATH 里有 `ffmpeg` 时额外支持视频、HEIC/HEIF、AVIF 预览；没有就退回通用图标
+- PATH 里有 `ffmpeg` 时额外支持视频、HEIC/HEIF、AVIF 预览，并能在查看器里把浏览器播不了的视频转码播放；没有就退回通用图标，这类视频只能下载
 - 缓存放在系统缓存目录（`%LOCALAPPDATA%\lan-drop\thumbs` / `~/.cache/lan-drop/thumbs`），7 天未用或总量超过 256 MB 时自动淘汰。用户清理系统缓存同样会删掉它，不影响任何原文件
 - 缓存键是「路径 + 大小 + 修改时间」，覆盖同名文件会自然换图。唯一看不出来的是「大小和修改时间都完全相同」的替换（保留时间戳的拷贝、FAT 的 2 秒精度），此时旧图标会留到文件下次被改动
 - 单张约 4 KB，并发解码限制为 2，不会抢传输的 CPU
@@ -213,7 +213,9 @@ filter = *.tmp; node_modules; re:^\.(git|svn)$
 | GET | `/` | 共享目录选择页（只有一个共享时直接跳转） |
 | GET | `/s/{share}/{dir}` | 服务端渲染的目录页 |
 | GET | `/static/` | 样式与脚本，按构建号长期缓存 |
-| GET | `/api/thumb?share=&path=&v=` | 方形缩略图；`v` 是文件大小与修改时间，仅用于浏览器缓存 |
+| GET | `/api/thumb?share=&path=&v=&size=large` | 缩略图默认裁成正方形；`size=large` 等比缩放供查看器使用。`v` 仅用于浏览器缓存 |
+| GET | `/api/preview/info?share=&path=` | 查看器用的文件元数据：像素、DPI、帧率、时长、编码，缺项不返回 |
+| GET | `/api/media/transcode?share=&path=` | 浏览器无法解码的视频实时转成 H.264/AAC 的 MP4 流；需要 ffmpeg，返回的是编码器管道，不落地文件 |
 | GET | `/api/list?share=&dir=` | 目录列表；`share` 为空时返回虚拟根 |
 | GET | `/api/download?share=&path=&inline=1` | 单文件下载，支持 `Range`；`inline=1` 时改为内联显示，供查看器使用 |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | 批量打包；`paths` 可重复，POST 用表单体提交大量选择 |
@@ -264,6 +266,9 @@ internal/i18n        消息表与系统语言检测
 internal/transfer    HTTP 服务、路径校验、流式收发、进度上报
   server.go          监听器生命周期、路由注册、路径解析
   handlers.go        单文件下载与写入类接口
+  thumb.go           缩略图与查看器大图的渲染、缓存与淘汰
+  preview_info.go    查看器用的像素、DPI、帧率、时长、编码探测
+  media.go           浏览器解码不了时的 H.264/AAC 实时转码
   zip.go             流式批量打包、目录遍历、条目命名
   netutil.go         端口探测、局域网 IP 排序
   view.go            页面渲染：模板数据、路径构建、语言解析

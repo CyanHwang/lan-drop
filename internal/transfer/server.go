@@ -319,6 +319,10 @@ func (s *Server) StartWithOptions(shares []Share, opt StartOptions) (Info, error
 	mux.HandleFunc("DELETE /api/file", s.handleDelete)
 	mux.HandleFunc("GET /api/info", s.handleInfo)
 	mux.HandleFunc("GET /api/thumb", s.handleThumb)
+	mux.HandleFunc("GET /api/preview/info", s.handlePreviewInfo)
+	// Fallback playback for codecs the browser has no decoder for. The page
+	// tries the original file first and only calls this after a decode error.
+	mux.HandleFunc("GET /api/media/transcode", s.handleTranscode)
 
 	// The browser UI. Paths are real, not fragments: a listing can be
 	// refreshed, bookmarked and opened from the address bar.

@@ -691,7 +691,8 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 // inlineContentType pins the MIME type of the formats the viewer understands.
 // ServeContent guesses from the extension, but a LAN box may not have a mime
 // database for .md or the Office types, and nosniff then turns them into
-// application/octet-stream.
+// application/octet-stream. Video matters just as much: a <video> element given
+// octet-stream with nosniff refuses to play a file it could decode perfectly.
 func inlineContentType(name string) string {
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".md", ".markdown":
@@ -708,6 +709,28 @@ func inlineContentType(name string) string {
 		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	case ".xls":
 		return "application/vnd.ms-excel"
+	case ".mp4", ".m4v":
+		return "video/mp4"
+	case ".mov":
+		return "video/quicktime"
+	case ".webm":
+		return "video/webm"
+	case ".mkv":
+		return "video/x-matroska"
+	case ".avi":
+		return "video/x-msvideo"
+	case ".ogv":
+		return "video/ogg"
+	case ".mp3":
+		return "audio/mpeg"
+	case ".m4a":
+		return "audio/mp4"
+	case ".wav":
+		return "audio/wav"
+	case ".ogg", ".opus":
+		return "audio/ogg"
+	case ".flac":
+		return "audio/flac"
 	}
 	return ""
 }

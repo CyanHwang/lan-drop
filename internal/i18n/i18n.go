@@ -179,11 +179,16 @@ const (
 	WebCreatedLabel    Msg = "web.createdLabel"
 	WebModified        Msg = "web.modified"
 	WebSize            Msg = "web.size"
-	WebVideoTodo       Msg = "web.videoTodo"
+	WebVideoFallback   Msg = "web.videoFallback"
+	WebVideoConverting Msg = "web.videoConverting"
 	WebPreviewFailed   Msg = "web.previewFailed"
 	WebPreviewLoading  Msg = "web.previewLoading"
 	WebPreviewLibFail  Msg = "web.previewLibFail"
 	WebRowsOmitted     Msg = "web.rowsOmitted"
+	WebResolution      Msg = "web.resolution"
+	WebFrameRate       Msg = "web.frameRate"
+	WebDuration        Msg = "web.duration"
+	WebCodec           Msg = "web.codec"
 )
 
 var catalogue = map[Lang]map[Msg]string{
@@ -330,11 +335,16 @@ var catalogue = map[Lang]map[Msg]string{
 		WebCreatedLabel:    "Created",
 		WebModified:        "Modified",
 		WebSize:            "Size",
-		WebVideoTodo:       "Video playback is not available yet",
+		WebVideoFallback:   "This video cannot be played in the browser. Download it and open it in a local player.",
+		WebVideoConverting: "Converting for playback…",
 		WebPreviewFailed:   "This file cannot be previewed",
 		WebPreviewLoading:  "Loading preview…",
 		WebPreviewLibFail:  "Could not load the preview component",
 		WebRowsOmitted:     "Showing the first %d rows",
+		WebResolution:      "Resolution",
+		WebFrameRate:       "Frame rate",
+		WebDuration:        "Duration",
+		WebCodec:           "Codec",
 	},
 	ZHCN: {
 		ErrServerRunning:     "服务已在运行",
@@ -479,11 +489,16 @@ var catalogue = map[Lang]map[Msg]string{
 		WebCreatedLabel:    "创建时间",
 		WebModified:        "修改时间",
 		WebSize:            "大小",
-		WebVideoTodo:       "视频播放功能尚未启用",
+		WebVideoFallback:   "浏览器无法直接播放这个视频，可下载后用本地播放器观看",
+		WebVideoConverting: "正在转码以便播放…",
 		WebPreviewFailed:   "这个文件无法预览",
 		WebPreviewLoading:  "正在加载预览…",
 		WebPreviewLibFail:  "预览组件加载失败",
 		WebRowsOmitted:     "仅显示前 %d 行",
+		WebResolution:      "分辨率",
+		WebFrameRate:       "帧率",
+		WebDuration:        "时长",
+		WebCodec:           "编码",
 	},
 }
 

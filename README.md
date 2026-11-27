@@ -186,11 +186,11 @@ Each row keeps a single "⋯" trigger: files offer view, download and delete, fo
 
 Files with a preview open in a full-screen viewer:
 
-- **Images** — drag to pan, wheel to zoom around the cursor, percentage in the toolbar; the footer shows the name, creation time, modification time and size. Double-click toggles between fit and 100%. Formats the browser cannot show (HEIC, AVIF) are converted by ffmpeg; this is an explicit click, so it works even with automatic thumbnails switched off.
+- **Images** — drag to pan, wheel to zoom around the cursor, percentage and a download button in the toolbar; the footer shows the name, creation time, modification time, size and resolution (plus DPI when present). Formats the browser renders natively are served as the original file, so EXIF orientation and animated GIFs survive; only HEIC/HEIF, AVIF and TIFF are converted (by ffmpeg) and only the 128 px listing icon is cropped square. Double-click toggles between fit and 100%.
 - **Markdown** — rendered with a local `marked` and sanitised with `DOMPurify`, so HTML inside a document cannot run script in the page.
-- **docx** — local `docx-preview` keeps Word paragraph and table layout; **xlsx / xls** — local `SheetJS` renders the first sheet at full width, up to 500 rows.
+- **docx** — local `docx-preview` keeps Word paragraph and table layout; **xlsx / xls** — local `SheetJS` renders the sheet as a spreadsheet: column widths, merged ranges, row heights, cell fills and number formats from the file, plus a frozen header row, row numbers and zebra striping at full width, up to 400 rows per sheet.
 - **PDF** — the browser's built-in viewer.
-- **Video** — the entry exists, but playback is still undecided; the viewer says so for now.
+- **Video** — plays the original file with native controls, using HTTP `Range`, so scrubbing is instant and the host does no work. When the browser has no decoder for that container or codec (HEVC `.mov`, `.avi`, `.wmv`), the page asks the host to re-encode to H.264/AAC on the fly with ffmpeg and streams the result; that fallback can only seek within what has already been sent. Without ffmpeg the viewer says so and offers the download button. Resolution, frame rate, duration and codec come from ffprobe.
 
 All preview libraries are vendored under `internal/transfer/static/vendor/`, loaded only when needed, and work offline. Licences are listed in that directory.
 
@@ -199,7 +199,7 @@ All preview libraries are vendored under `internal/transfer/static/vendor/`, loa
 Off by default. Turn them on in the desktop window's options area and the browser listing shows square previews for images and videos. The switch is persisted as `thumbnails` in `lan-drop.ini`, works whether the service is running or not, and clears the cache when turned off.
 
 - JPEG / PNG / GIF / WebP / BMP / TIFF are decoded in-process; no extra component
-- With `ffmpeg` on PATH, video, HEIC/HEIF and AVIF previews are added; without it those rows keep the generic icon
+- With `ffmpeg` on PATH, video, HEIC/HEIF and AVIF previews are added, and the viewer can transcode a video the browser cannot play; without it those rows keep the generic icon and such videos offer only a download
 - Previews live in the OS cache directory (`%LOCALAPPDATA%\lan-drop\thumbs` / `~/.cache/lan-drop/thumbs`). They are evicted after 7 days or when the directory passes 256 MB. Clearing the system cache removes them too, without touching any original file
 - The cache key is path + size + modification time, so overwriting a file with the same name just generates a new preview. The one case it cannot see is a replacement with both the same size and the same timestamp (timestamp-preserving copies, FAT's 2-second granularity); the old icon then lasts until the file changes again
 - Each preview is ~4 KB and decoding is limited to two workers, so transfers keep their CPU
@@ -215,7 +215,9 @@ The browser page and every endpoint share one port. No extra services.
 | GET | `/` | Share picker (a single share redirects straight to it) |
 | GET | `/s/{share}/{dir}` | Rendered directory listing |
 | GET | `/static/` | Stylesheet and script, immutable-cached per build |
-| GET | `/api/thumb?share=&path=&v=` | Square preview; `v` is size and mtime, used only as a browser cache key |
+| GET | `/api/thumb?share=&path=&v=&size=large` | Square icon by default; `size=large` keeps the aspect ratio for the viewer. `v` is only a browser cache key |
+| GET | `/api/preview/info?share=&path=` | Viewer metadata: pixels, DPI, frame rate, duration, codec; missing fields omitted |
+| GET | `/api/media/transcode?share=&path=` | Live H.264/AAC MP4 for a video the browser cannot decode. Needs ffmpeg; the response is the encoder's pipe, not a stored file |
 | GET | `/api/list?share=&dir=` | Directory listing. Empty `share` returns the virtual root |
 | GET | `/api/download?share=&path=&inline=1` | Single-file download, supports `Range`; `inline=1` serves it for the viewer instead of downloading |
 | GET / POST | `/api/download/zip?share=&dir=&paths=...` | Batch zip. `paths` repeats; POST accepts a form body for large selections |
@@ -268,6 +270,9 @@ internal/i18n        Message catalogue and OS language detection
 internal/transfer    HTTP server, path validation, streaming, progress
   server.go          Listener lifecycle, routing, path resolution
   handlers.go        The single-file and write endpoints
+  thumb.go           Thumbnail and viewer-size rendering, cache and eviction
+  preview_info.go    Pixels, DPI, frame rate, duration and codec for the viewer
+  media.go           Live H.264/AAC fallback for video the browser cannot decode
   zip.go             Streaming batch zip, folder walking, entry naming
   netutil.go         Port probing, LAN address ranking
   view.go            Page rendering: template data, paths, language

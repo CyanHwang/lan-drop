@@ -10,7 +10,7 @@
 <title>{{.Title}}</title>
 <link rel="stylesheet" href="/static/app.css?v={{.Build}}">
 </head>
-<body class="{{if not .ShowDock}}no-dock{{end}}" data-share="{{.ShareID}}" data-dir="{{.Dir}}" data-build="{{.Build}}" data-readonly="{{if .ReadOnly}}1{{else}}0{{end}}">
+<body class="{{if not .ShowDock}}no-dock{{end}}" data-share="{{.ShareID}}" data-dir="{{.Dir}}" data-build="{{.Build}}" data-readonly="{{if .ReadOnly}}1{{else}}0{{end}}" data-ffmpeg="{{if .HasFfmpeg}}1{{else}}0{{end}}">
 <div class="app">
   <header class="topbar">
     <a class="brand" href="{{.HomeHref}}">Lan<span>Drop</span></a>
@@ -80,10 +80,12 @@
       <button type="button" id="zoomIn" aria-label="{{.ZoomIn}}" title="{{.ZoomIn}}">+</button>
       <button type="button" id="zoomFit" aria-label="{{.ZoomFit}}" title="{{.ZoomFit}}">⤢</button>
     </span>
+    <button type="button" class="viewer-download" id="viewerDownload" aria-label="{{.Download}}" title="{{.Download}}">{{template "icoDownload"}}</button>
     <button type="button" class="viewer-close" id="viewerClose" aria-label="{{.Close}}" title="{{.Close}}">{{template "icoClose"}}</button>
   </div>
   <div class="viewer-stage" id="viewerStage">
     <img id="viewerImg" alt="" hidden>
+    <video id="viewerVideo" controls playsinline preload="metadata" hidden></video>
     <div id="viewerDoc" class="viewer-doc" hidden></div>
     <iframe id="viewerFrame" title="{{.View}}" hidden></iframe>
   </div>

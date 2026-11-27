@@ -257,7 +257,35 @@ func TestLargePreviewWorksWithThumbnailsOff(t *testing.T) {
 	if err != nil {
 		t.Fatalf("not a JPEG: %v", err)
 	}
-	if img.Bounds().Dx() != viewerSize {
-		t.Fatalf("preview is %d px, want %d", img.Bounds().Dx(), viewerSize)
+	// A 600x400 source is not blown up; a larger one is reduced inside the
+	// 1600 px box without cropping to a square.
+	if img.Bounds().Dx() != 600 || img.Bounds().Dy() != 400 {
+		t.Fatalf("preview is %dx%d, want the original 600x400",
+			img.Bounds().Dx(), img.Bounds().Dy())
+	}
+}
+
+// Large previews must keep the source aspect ratio. The old code cropped
+// everything to a square, which turned every landscape photo into a portrait
+// puzzle when opened full-screen.
+func TestLargePreviewKeepsAspectRatio(t *testing.T) {
+	isolateThumbCache(t)
+	s, base, root, share := newTestServer(t)
+	writeTestJPEG(t, filepath.Join(root, "wide.jpg"), 2400, 1200)
+	s.SetThumbnails(true)
+
+	resp := do(t, "GET", base+"/api/thumb?share="+share+"&path=wide.jpg&size=large", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	data, _ := io.ReadAll(resp.Body)
+	img, err := jpeg.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if img.Bounds().Dx() != viewerSize || img.Bounds().Dy() != viewerSize/2 {
+		t.Fatalf("preview is %dx%d, want %dx%d",
+			img.Bounds().Dx(), img.Bounds().Dy(), viewerSize, viewerSize/2)
 	}
 }

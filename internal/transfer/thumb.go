@@ -12,6 +12,7 @@ import (
 	"image/color"
 	"image/jpeg"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -62,6 +63,10 @@ const (
 	thumbTTL = 7 * 24 * time.Hour
 	// thumbDiskCap caps the whole cache. 4 KB each means ~64k images.
 	thumbDiskCap = 256 << 20
+	// thumbRenderVersion is part of the key so a change to the renderer (for
+	// example, no longer cropping full-screen previews square) cannot serve
+	// last week's renditions for seven days.
+	thumbRenderVersion = "v2"
 	// thumbTimeout bounds one ffmpeg run. A damaged file must not hold a
 	// worker forever.
 	thumbTimeout = 20 * time.Second
@@ -149,8 +154,8 @@ func PurgeThumbCache() (int64, error) {
 // rather than solved with a content hash that would cost a read per row.
 func thumbKey(abs string, size int64, mtime time.Time, variant string) string {
 	sum := sha256.Sum256([]byte(strings.ToLower(abs)))
-	return hex.EncodeToString(sum[:8]) + "-" + strconv.FormatInt(size, 10) + "-" +
-		strconv.FormatInt(mtime.UnixNano(), 10) + "-" + variant
+	return thumbRenderVersion + "-" + hex.EncodeToString(sum[:8]) + "-" +
+		strconv.FormatInt(size, 10) + "-" + strconv.FormatInt(mtime.UnixNano(), 10) + "-" + variant
 }
 
 // thumbCache is two tiers: a small LRU in memory for the rows on screen, and
@@ -384,16 +389,22 @@ func writeThumb(w http.ResponseWriter, data []byte) {
 	_, _ = w.Write(data)
 }
 
-// renderThumb produces the JPEG bytes for one file.
+// renderThumb produces the JPEG bytes for one file. A 128 px icon is cropped
+// square to fill the icon plate; a full-screen preview is not an icon and must
+// keep the picture's aspect ratio.
 func (s *Server) renderThumb(abs string, st os.FileInfo, edge int) ([]byte, error) {
+	cover := edge == thumbSize
 	if isVideoName(abs) || !nativeImage(abs) {
-		return s.ffmpegThumb(abs, edge)
+		return s.ffmpegThumb(abs, edge, cover)
 	}
 	img, err := decodeThumbSource(abs, st)
 	if err != nil {
 		return nil, err
 	}
-	return encodeThumb(coverThumb(img, edge))
+	if cover {
+		return encodeThumb(coverThumb(img, edge))
+	}
+	return encodeThumb(fitThumb(img, edge))
 }
 
 func nativeImage(name string) bool {
@@ -432,20 +443,33 @@ func decodeThumbSource(abs string, st os.FileInfo) (image.Image, error) {
 	return img, err
 }
 
-// coverThumb centre-crops to a square and scales it down. Large reductions go
-// through halving first: a single bilinear step from 4032 px to 128 px samples
-// four pixels and throws the rest away, which is visible as noise on any photo
-// with fine detail.
+// coverThumb centre-crops to a square for the 128 px icon slot.
 func coverThumb(src image.Image, size int) image.Image {
 	b := src.Bounds()
-	side := b.Dx()
-	if b.Dy() < side {
-		side = b.Dy()
-	}
+	side := min(b.Dx(), b.Dy())
 	x0 := b.Min.X + (b.Dx()-side)/2
 	y0 := b.Min.Y + (b.Dy()-side)/2
+	return scaleInto(src, image.Rect(x0, y0, x0+side, y0+side), size, size)
+}
 
-	dst := image.NewRGBA(image.Rect(0, 0, size, size))
+// fitThumb keeps the whole picture and scales it inside a maxEdge box. A
+// viewer that shows every preview as a square is a bug, not a design choice.
+func fitThumb(src image.Image, maxEdge int) image.Image {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w <= maxEdge && h <= maxEdge {
+		return scaleInto(src, b, w, h)
+	}
+	ratio := float64(maxEdge) / float64(max(w, h))
+	return scaleInto(src, b,
+		max(1, int(math.Round(float64(w)*ratio))),
+		max(1, int(math.Round(float64(h)*ratio))))
+}
+
+// scaleInto composites onto the plate (so transparency never turns black),
+// halves large sources once or twice, then does the final high-quality scale.
+func scaleInto(src image.Image, rect image.Rectangle, dw, dh int) image.Image {
+	dst := image.NewRGBA(image.Rect(0, 0, dw, dh))
 	draw.Draw(dst, dst.Bounds(), &image.Uniform{C: thumbPlate}, image.Point{}, draw.Src)
 
 	// SubImage is a view, not a copy: cropping a 12 MP JPEG must not allocate
@@ -454,15 +478,15 @@ func coverThumb(src image.Image, size int) image.Image {
 	if si, ok := src.(interface {
 		SubImage(image.Rectangle) image.Image
 	}); ok {
-		cur = si.SubImage(image.Rect(x0, y0, x0+side, y0+side))
+		cur = si.SubImage(rect)
 	} else {
 		// Every decoder this package registers returns a type with SubImage,
 		// so this is a correctness net rather than a hot path.
-		crop := image.NewRGBA(image.Rect(0, 0, side, side))
-		draw.Draw(crop, crop.Bounds(), src, image.Pt(x0, y0), draw.Src)
-		cur = crop
+		copy := image.NewRGBA(image.Rect(0, 0, rect.Dx(), rect.Dy()))
+		draw.Draw(copy, copy.Bounds(), src, rect.Min, draw.Src)
+		cur = copy
 	}
-	for cur.Bounds().Dx() > size*2 {
+	for cur.Bounds().Dx() > dw*2 || cur.Bounds().Dy() > dh*2 {
 		cur = halve(cur)
 	}
 	draw.CatmullRom.Scale(dst, dst.Bounds(), cur, cur.Bounds(), draw.Over, nil)
@@ -494,13 +518,18 @@ func encodeThumb(img image.Image) ([]byte, error) {
 // ffmpegThumb is the escape hatch for everything the standard library cannot
 // read: video, HEIC, AVIF. ffmpeg is taken from PATH, never bundled, so the
 // single-file promise holds and the feature is simply absent without it.
-func (s *Server) ffmpegThumb(abs string, edge int) ([]byte, error) {
+func (s *Server) ffmpegThumb(abs string, edge int, cover bool) ([]byte, error) {
 	bin := s.ffmpegPath()
 	if bin == "" {
 		return nil, errNoThumb
 	}
-	filter := fmt.Sprintf("[0:v]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d[v]",
-		edge, edge, edge, edge)
+	filter := fmt.Sprintf("[0:v]scale=%d:%d:force_original_aspect_ratio=decrease",
+		edge, edge)
+	if cover {
+		filter = fmt.Sprintf("[0:v]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
+			edge, edge, edge, edge)
+	}
+	filter += "[v]"
 
 	run := func(seek string) ([]byte, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), thumbTimeout)
